@@ -1,1 +1,0 @@
-quero ler essa merda

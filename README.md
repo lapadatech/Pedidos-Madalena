@@ -5,3 +5,4 @@ oi lindaooooooooodasdasdasdashdjashjkdashjksda
 
 
 lindoooooioooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+ krl sera q foi?
