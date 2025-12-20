@@ -1,24 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2, X } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { UppercaseInput } from '@/shared/ui/UppercaseInput';
 import { Label } from '@/shared/ui/label';
 import { Switch } from '@/shared/ui/switch';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { useToast } from '@/shared/ui/use-toast';
 import {
   listarGruposComplementos,
   criarGrupoComplemento,
   atualizarGrupoComplemento,
   deletarGrupoComplemento,
-} from '@/lib/api';
+} from '@/features/produtos/services/produtosApi';
 
 const formatCurrency = (value) => {
   if (typeof value !== 'number') return 'R$ 0,00';
@@ -37,11 +31,7 @@ function ConfigComplementos() {
   });
   const { toast } = useToast();
 
-  useEffect(() => {
-    carregarGrupos();
-  }, []);
-
-  const carregarGrupos = async () => {
+  const carregarGrupos = useCallback(async () => {
     try {
       const data = await listarGruposComplementos();
       setGrupos(data);
@@ -52,7 +42,11 @@ function ConfigComplementos() {
         variant: 'destructive',
       });
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    carregarGrupos();
+  }, [carregarGrupos]);
 
   const handleOpcaoChange = (index, field, value) => {
     const novasOpcoes = [...formData.opcoes];

@@ -10,7 +10,12 @@ import ErrorBoundary from '@/shared/components/ErrorBoundary';
 ReactDOM.createRoot(document.getElementById('root')).render(
   <>
     <ErrorBoundary>
-      <BrowserRouter>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
         <SupabaseAuthProvider>
           <App />
           <Toaster />

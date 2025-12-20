@@ -12,17 +12,17 @@ import {
   PackageCheck,
   ListOrdered,
   Coins as HandCoins,
-  CalendarDays,
   Calendar as CalendarIcon,
 } from 'lucide-react';
 import { useToast } from '@/shared/ui/use-toast';
-import { listarPedidos, contarRegistros, obterTotalPedidosGeral } from '@/lib/api';
+import { listarPedidos, obterTotalPedidosGeral } from '@/features/pedidos/services/pedidosApi';
+import { contarRegistros } from '@/features/dashboard/services/dashboardApi';
 import { Button } from '@/shared/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
@@ -177,22 +177,15 @@ function Dashboard() {
       if (start) filtrosData.data_entrega_gte = start;
       if (end) filtrosData.data_entrega_lte = end;
 
-      const [
-        totalPedidosGeral,
-        pedidosAbertosResult,
-        totalClientes,
-        totalProdutosAtivos,
-        pedidosGeraisResult,
-      ] = await Promise.all([
-        obterTotalPedidosGeral(filtrosData),
-        listarPedidos({ status_geral: 'abertos', ...filtrosData }),
-        contarRegistros('clientes'), // Clientes sempre total geral
-        contarRegistros('produtos', [{ column: 'ativo', operator: 'eq', value: true }]), // Produtos sempre total geral
-        listarPedidos(filtrosData), // Fetch all orders in range to filter locally for correctness
-      ]);
+      const [totalPedidosGeral, totalClientes, totalProdutosAtivos, pedidosGeraisResult] =
+        await Promise.all([
+          obterTotalPedidosGeral(filtrosData),
+          contarRegistros('clientes'), // Clientes sempre total geral
+          contarRegistros('produtos', [{ column: 'ativo', operator: 'eq', value: true }]), // Produtos sempre total geral
+          listarPedidos(filtrosData), // Fetch all orders in range to filter locally for correctness
+        ]);
 
       const todosPedidosNoPeriodo = pedidosGeraisResult?.data || [];
-      const todosPedidosAbertosNoPeriodo = pedidosAbertosResult?.data || [];
 
       // 1. Total de Pedidos (Global no período)
       const totalPedidosCount = totalPedidosGeral.count;

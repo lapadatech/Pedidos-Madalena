@@ -60,39 +60,49 @@ function Login() {
               <p className="text-gray-600">Sistema de Gestão de Pedidos</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+            {carregando ? (
+              <div className="space-y-6 animate-pulse">
+                <div className="space-y-2">
+                  <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                  <div className="h-10 w-full bg-gray-200 rounded"></div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                  <div className="h-10 w-full bg-gray-200 rounded"></div>
+                </div>
+                <div className="h-10 w-full bg-gray-200 rounded"></div>
               </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="********"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="senha">Senha</Label>
-                <Input
-                  id="senha"
-                  type="password"
-                  placeholder="••••••••"
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  required
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="senha">Senha</Label>
+                  <Input
+                    id="senha"
+                    type="password"
+                    placeholder="********"
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                    required
+                  />
+                </div>
 
-              <Button
-                type="submit"
-                className="w-full bg-orange-500 hover:bg-orange-600"
-                disabled={carregando}
-              >
-                {carregando ? 'Entrando...' : 'Entrar'}
-              </Button>
-            </form>
+                <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600">
+                  Entrar
+                </Button>
+              </form>
+            )}
 
             <div className="mt-6 text-center text-sm text-gray-500">
               <p></p>

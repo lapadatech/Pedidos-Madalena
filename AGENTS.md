@@ -33,6 +33,25 @@ Este arquivo define instruções simples para quem for ajudar neste projeto.
 - Após editar, rode `npm run lint` se fizer sentido.
 - Explique o que foi feito e onde.
 
+## Estrutura por feature
+
+- `src/features/*/pages`: telas principais por dominio.
+- `src/features/*/components`: componentes especificos da feature.
+- `src/features/*/services`: chamadas de API e regras da feature.
+- `src/shared/components`: componentes reutilizaveis.
+- `src/shared/ui`: UI base (botoes, inputs, dialogs).
+- `src/shared/lib`: utilitarios comuns (utils, apiBase, supabase).
+- `src/shared/hooks`: hooks compartilhados.
+
+## Padroes de import
+
+- Use alias `@` para evitar caminhos relativos longos.
+- UI base: `@/shared/ui/...`
+- Utilitarios: `@/shared/lib/...`
+- Services por dominio: `@/features/<feature>/services/...`
+- Componentes de feature: `@/features/<feature>/components/...`
+
+
 ## Regras de multi-lojas
 
 - Produtos, tags e clientes sao globais.

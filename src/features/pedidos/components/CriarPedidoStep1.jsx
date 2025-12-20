@@ -5,8 +5,7 @@ import { Input } from '@/shared/ui/input';
 import { UppercaseInput } from '@/shared/ui/UppercaseInput';
 import { Label } from '@/shared/ui/label';
 import { useToast } from '@/shared/ui/use-toast';
-import { buscarClientePorCelular } from '@/lib/api';
-import { criarCliente } from '@/lib/api';
+import { buscarClientePorCelular, criarCliente } from '@/features/clientes/services/clientesApi';
 
 function CriarPedidoStep1({ onProximo, dadosIniciais }) {
   const [celular, setCelular] = useState(dadosIniciais.cliente?.celular || '');

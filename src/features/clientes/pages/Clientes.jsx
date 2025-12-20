@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, X, Star, AlertCircle, Loader2 } from 'lucide-react';
@@ -9,6 +9,8 @@ import { Label } from '@/shared/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useToast } from '@/shared/ui/use-toast';
+import { ToastAction } from '@/shared/ui/toast';
+import useDebouncedValue from '@/shared/hooks/useDebouncedValue';
 import {
   listarClientes,
   criarCliente,
@@ -20,7 +22,7 @@ import {
   atualizarEndereco,
   deletarEndereco,
   buscarClientePorCelular,
-} from '@/lib/api';
+} from '@/features/clientes/services/clientesApi';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 const maskCelular = (value) => {
@@ -106,7 +108,8 @@ function Clientes() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState(initialState);
   const [celularExistente, setCelularExistente] = useState(false);
-  const debounceTimeout = useRef(null);
+  const debouncedBusca = useDebouncedValue(busca, 300);
+  const debouncedCelular = useDebouncedValue(formData.celular, 500);
 
   const carregarClientes = useCallback(
     async (termoBusca) => {
@@ -121,6 +124,11 @@ function Clientes() {
           title: 'Erro ao carregar clientes',
           description: error.message,
           variant: 'destructive',
+          action: (
+            <ToastAction altText="Tentar novamente" onClick={() => carregarClientes(termoBusca)}>
+              Tentar novamente
+            </ToastAction>
+          ),
         });
       } finally {
         setLoading(false);
@@ -130,8 +138,8 @@ function Clientes() {
   );
 
   useEffect(() => {
-    carregarClientes(busca);
-  }, [busca, carregarClientes]);
+    carregarClientes(debouncedBusca);
+  }, [debouncedBusca, carregarClientes]);
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
@@ -171,16 +179,12 @@ function Clientes() {
   );
 
   useEffect(() => {
-    if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
-    if (formData.celular) {
-      debounceTimeout.current = setTimeout(() => {
-        checkCelular(formData.celular);
-      }, 500);
+    if (debouncedCelular) {
+      checkCelular(debouncedCelular);
     } else {
       setCelularExistente(false);
     }
-    return () => clearTimeout(debounceTimeout.current);
-  }, [formData.celular, checkCelular]);
+  }, [debouncedCelular, checkCelular]);
 
   const handleEnderecoChange = (index, e) => {
     const { name, value } = e.target;

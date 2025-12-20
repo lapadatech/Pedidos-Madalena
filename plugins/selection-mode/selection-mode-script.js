@@ -144,8 +144,9 @@ function getPathToElement(element) {
     }
 
     if (current.parentElement) {
+      const nodeName = current.nodeName;
       const siblings = Array.from(current.parentElement.children);
-      const sameTypeSiblings = siblings.filter((s) => s.nodeName === current.nodeName);
+      const sameTypeSiblings = siblings.filter((s) => s.nodeName === nodeName);
       if (sameTypeSiblings.length > 1) {
         const index = sameTypeSiblings.indexOf(current) + 1;
         selector += `:nth-of-type(${index})`;

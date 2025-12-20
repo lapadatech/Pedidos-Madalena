@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2, ShieldCheck, ShieldOff, Shield } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { UppercaseInput } from '@/shared/ui/UppercaseInput';
@@ -12,7 +12,12 @@ import {
 } from '@/shared/ui/dialog';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { useToast } from '@/shared/ui/use-toast';
-import { listarPerfis, criarPerfil, atualizarPerfil, deletarPerfil } from '@/lib/api';
+import {
+  listarPerfis,
+  criarPerfil,
+  atualizarPerfil,
+  deletarPerfil,
+} from '@/features/configuracoes/services/configuracoesApi';
 
 const modulosPermissao = [
   { id: 'dashboard', nome: 'Dashboard' },
@@ -39,11 +44,7 @@ function ConfigPerfis() {
   });
   const { toast } = useToast();
 
-  useEffect(() => {
-    carregarPerfis();
-  }, []);
-
-  const carregarPerfis = async () => {
+  const carregarPerfis = useCallback(async () => {
     try {
       const data = await listarPerfis();
       setPerfis(data);
@@ -54,7 +55,11 @@ function ConfigPerfis() {
         variant: 'destructive',
       });
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    carregarPerfis();
+  }, [carregarPerfis]);
 
   const handlePermissaoChange = (modulo, acao, checked) => {
     setFormData((prev) => {

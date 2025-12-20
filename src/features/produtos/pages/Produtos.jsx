@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
 import { Plus, Search, Edit, Trash2, X, Loader2 } from 'lucide-react';
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Switch } from '@/shared/ui/switch';
 import { useToast } from '@/shared/ui/use-toast';
+import { ToastAction } from '@/shared/ui/toast';
 import {
   listarProdutos,
   criarProduto,
@@ -17,7 +18,7 @@ import {
   deletarProduto,
   listarCategorias,
   listarGruposComplementos,
-} from '@/lib/api';
+} from '@/features/produtos/services/produtosApi';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 const SkeletonProdutoCard = () => (
@@ -70,7 +71,7 @@ function Produtos() {
     grupos_complementos: [],
   });
 
-  const carregarDados = async () => {
+  const carregarDados = useCallback(async () => {
     setLoading(true);
     try {
       const [produtosResponse, categoriasData, gruposData] = await Promise.all([
@@ -86,14 +87,19 @@ function Produtos() {
         title: 'Erro ao carregar dados',
         description: error.message,
         variant: 'destructive',
+        action: (
+          <ToastAction altText="Tentar novamente" onClick={carregarDados}>
+            Tentar novamente
+          </ToastAction>
+        ),
       });
     }
     setLoading(false);
-  };
+  }, [toast]);
 
   useEffect(() => {
     carregarDados();
-  }, []);
+  }, [carregarDados]);
 
   const resetForm = () => {
     setFormData({

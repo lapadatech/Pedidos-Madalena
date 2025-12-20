@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { UppercaseInput } from '@/shared/ui/UppercaseInput';
@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from '@/shared/ui/dialog';
 import { useToast } from '@/shared/ui/use-toast';
-import { listarTags, criarTag, atualizarTag, deletarTag } from '@/lib/tagsApi';
+import { listarTags, criarTag, atualizarTag, deletarTag } from '@/features/tags/services/tagsApi';
 import TagChip from '@/shared/components/tags/TagChip';
 
 function ConfigTags() {
@@ -23,11 +23,7 @@ function ConfigTags() {
   const [cor, setCor] = useState('#FF9921');
   const { toast } = useToast();
 
-  useEffect(() => {
-    carregarTags();
-  }, []);
-
-  const carregarTags = async () => {
+  const carregarTags = useCallback(async () => {
     try {
       const dados = await listarTags();
       setTags(dados);
@@ -38,7 +34,11 @@ function ConfigTags() {
         variant: 'destructive',
       });
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    carregarTags();
+  }, [carregarTags]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

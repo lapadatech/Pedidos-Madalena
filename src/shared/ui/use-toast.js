@@ -78,6 +78,8 @@ export const reducer = (state, action) => {
         ...state,
         toasts: state.toasts.filter((t) => t.id !== action.toastId),
       };
+    default:
+      return state;
   }
 };
 

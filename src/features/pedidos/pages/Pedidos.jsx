@@ -6,8 +6,7 @@ import * as XLSX from 'xlsx';
 import { Button } from '@/shared/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
-import { listarPedidos } from '@/lib/api';
-import { listarTags } from '@/lib/tagsApi';
+import { listarPedidos } from '@/features/pedidos/services/pedidosApi';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import CriarPedidoStep1 from '@/features/pedidos/components/CriarPedidoStep1';
 import CriarPedidoStep2 from '@/features/pedidos/components/CriarPedidoStep2';
@@ -16,6 +15,7 @@ import PedidosKanban from '@/features/pedidos/components/PedidosKanban';
 import PedidosTabela from '@/features/pedidos/components/PedidosTabela';
 import PedidoDetalheDialog from '@/features/pedidos/components/PedidoDetalheDialog';
 import { useToast } from '@/shared/ui/use-toast';
+import { ToastAction } from '@/shared/ui/toast';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import TagSelector from '@/shared/components/tags/TagSelector';
@@ -88,11 +88,29 @@ function Pedidos() {
       setPedidos(data || []);
       setTotalPedidos(count || 0);
     } catch (error) {
-      // Erro já tratado na API
+      toast({
+        title: 'Erro ao carregar pedidos',
+        description: error.message || 'Nao foi possivel carregar os pedidos.',
+        variant: 'destructive',
+        action: (
+          <ToastAction altText="Tentar novamente" onClick={carregarPedidos}>
+            Tentar novamente
+          </ToastAction>
+        ),
+      });
     } finally {
       setLoading(false);
     }
-  }, [activeTab, busca, filtroStatus, filtroPagamento, filtroEntrega, filtroTagIds, currentPage]);
+  }, [
+    activeTab,
+    busca,
+    filtroStatus,
+    filtroPagamento,
+    filtroEntrega,
+    filtroTagIds,
+    currentPage,
+    toast,
+  ]);
 
   useEffect(() => {
     carregarPedidos();

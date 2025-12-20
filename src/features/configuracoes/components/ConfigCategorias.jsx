@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { UppercaseInput } from '@/shared/ui/UppercaseInput';
@@ -11,7 +11,12 @@ import {
   DialogTrigger,
 } from '@/shared/ui/dialog';
 import { useToast } from '@/shared/ui/use-toast';
-import { listarCategorias, criarCategoria, atualizarCategoria, deletarCategoria } from '@/lib/api';
+import {
+  listarCategorias,
+  criarCategoria,
+  atualizarCategoria,
+  deletarCategoria,
+} from '@/features/produtos/services/produtosApi';
 
 function ConfigCategorias() {
   const [categorias, setCategorias] = useState([]);
@@ -20,11 +25,7 @@ function ConfigCategorias() {
   const [nome, setNome] = useState('');
   const { toast } = useToast();
 
-  useEffect(() => {
-    carregarCategorias();
-  }, []);
-
-  const carregarCategorias = async () => {
+  const carregarCategorias = useCallback(async () => {
     try {
       const dados = await listarCategorias();
       setCategorias(dados);
@@ -35,7 +36,11 @@ function ConfigCategorias() {
         variant: 'destructive',
       });
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    carregarCategorias();
+  }, [carregarCategorias]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

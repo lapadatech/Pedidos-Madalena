@@ -10,10 +10,9 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import {
   listarProdutos,
   listarGruposComplementosComOpcoes,
-  criarPedido,
-  atualizarPedidoCompleto,
-} from '@/lib/api';
-import { vincularTagsPedido } from '@/lib/tagsApi';
+} from '@/features/produtos/services/produtosApi';
+import { criarPedido, atualizarPedidoCompleto } from '@/features/pedidos/services/pedidosApi';
+import { vincularTagsPedido } from '@/features/tags/services/tagsApi';
 import TagSelector from '@/shared/components/tags/TagSelector';
 
 function CriarPedidoStep3({ onVoltar, onFinalizar, dadosIniciais, editMode }) {

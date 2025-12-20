@@ -16,9 +16,13 @@ import {
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog';
 import { useToast } from '@/shared/ui/use-toast';
-import { obterPedidoCompleto, atualizarPedido, deletarPedido } from '@/lib/api';
+import {
+  obterPedidoCompleto,
+  atualizarPedido,
+  deletarPedido,
+} from '@/features/pedidos/services/pedidosApi';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { maskCelular } from '@/lib/maskUtils';
+import { maskCelular } from '@/shared/lib/maskUtils';
 import TagChip from '@/shared/components/tags/TagChip';
 
 const formatarHora = (hora) => {

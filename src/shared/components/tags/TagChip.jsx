@@ -1,6 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 
 function TagChip({ nome, cor, onRemove, className }) {
   const textColor = getContrastColor(cor);

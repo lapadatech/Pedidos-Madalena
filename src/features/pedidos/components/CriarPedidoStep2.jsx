@@ -6,7 +6,11 @@ import { UppercaseInput } from '@/shared/ui/UppercaseInput';
 import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useToast } from '@/shared/ui/use-toast';
-import { criarEndereco, buscarCep, listarEnderecos } from '@/lib/api';
+import {
+  criarEndereco,
+  buscarCep,
+  listarEnderecos,
+} from '@/features/clientes/services/clientesApi';
 
 const maskCep = (value) => {
   if (!value) return '';
@@ -92,7 +96,7 @@ function CriarPedidoStep2({ onProximo, onVoltar, dadosIniciais }) {
       }
     };
     carregarEnderecos();
-  }, [dadosIniciais.cliente?.id, toast]);
+  }, [dadosIniciais.cliente?.id, enderecosCliente, enderecoSelecionado, toast]);
 
   const handleNovoEnderecoChange = (e) => {
     const { name, value } = e.target;

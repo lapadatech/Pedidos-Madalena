@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import { ArrowLeft, Home, Package, Loader2 } from 'lucide-react';
-import { useToast } from '@/shared/ui/use-toast';
-import { obterCliente, listarEnderecos, listarPedidos } from '@/lib/api';
+import { ArrowLeft, Home, Loader2, Package } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
+import { obterCliente, listarEnderecos } from '@/features/clientes/services/clientesApi';
+import { listarPedidos } from '@/features/pedidos/services/pedidosApi';
+import PedidoDetalheDialog from '@/features/pedidos/components/PedidoDetalheDialog';
+import TagChip from '@/shared/components/tags/TagChip';
+import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
+import { useToast } from '@/shared/ui/use-toast';
 
 const maskCelular = (value) => {
   if (!value) return '';
@@ -15,11 +19,27 @@ const maskCelular = (value) => {
   return value;
 };
 
+const formatDate = (dateString) => {
+  if (!dateString) return '-';
+  const date = new Date(dateString + 'T00:00:00');
+  return date.toLocaleDateString('pt-BR');
+};
+
+const formatCurrency = (value) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+
+const normalizeStatus = (status) =>
+  (status || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
 function ClienteDetalhe() {
   const { id } = useParams();
   const [cliente, setCliente] = useState(null);
   const [enderecos, setEnderecos] = useState([]);
   const [pedidos, setPedidos] = useState([]);
+  const [pedidoSelecionadoId, setPedidoSelecionadoId] = useState(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -34,7 +54,7 @@ function ClienteDetalhe() {
         ]);
         setCliente(clienteData);
         setEnderecos(enderecosData);
-        setPedidos(pedidosData.data);
+        setPedidos(pedidosData.data || []);
       } catch (error) {
         toast({
           title: 'Erro ao carregar dados do cliente',
@@ -59,13 +79,16 @@ function ClienteDetalhe() {
   if (!cliente) {
     return (
       <div className="text-center">
-        <p>Cliente não encontrado.</p>
+        <p>Cliente nao encontrado.</p>
         <Button asChild variant="link" className="text-orange-500">
           <Link to="/clientes">Voltar para a lista</Link>
         </Button>
       </div>
     );
   }
+
+  const totalPedidos = pedidos.reduce((sum, pedido) => sum + (pedido.total || 0), 0);
+  const ticketMedio = pedidos.length > 0 ? totalPedidos / pedidos.length : 0;
 
   return (
     <>
@@ -85,7 +108,7 @@ function ClienteDetalhe() {
 
         <div className="bg-white p-6 rounded-lg shadow space-y-4">
           <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Home className="text-orange-500" /> Endereços
+            <Home className="text-orange-500" /> Enderecos
           </h2>
           {enderecos.length > 0 ? (
             <ul className="space-y-4">
@@ -105,14 +128,32 @@ function ClienteDetalhe() {
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-gray-500">Nenhum endereço cadastrado.</p>
+            <p className="text-sm text-gray-500">Nenhum endereco cadastrado.</p>
           )}
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow space-y-4">
           <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Package className="text-orange-500" /> Histórico de Pedidos
+            <Package className="text-orange-500" /> Historico de Pedidos
           </h2>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="rounded-lg border bg-white p-4">
+              <p className="text-sm text-gray-500">Quantidade de pedidos</p>
+              <p className="mt-2 text-2xl font-semibold text-gray-900">{pedidos.length}</p>
+            </div>
+            <div className="rounded-lg border bg-white p-4">
+              <p className="text-sm text-gray-500">Valor total</p>
+              <p className="mt-2 text-2xl font-semibold text-gray-900">
+                {formatCurrency(totalPedidos)}
+              </p>
+            </div>
+            <div className="rounded-lg border bg-white p-4">
+              <p className="text-sm text-gray-500">Ticket medio</p>
+              <p className="mt-2 text-2xl font-semibold text-gray-900">
+                {formatCurrency(ticketMedio)}
+              </p>
+            </div>
+          </div>
           {pedidos.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -122,7 +163,7 @@ function ClienteDetalhe() {
                       scope="col"
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
-                      Nº do Pedido
+                      N do Pedido
                     </th>
                     <th
                       scope="col"
@@ -134,21 +175,81 @@ function ClienteDetalhe() {
                       scope="col"
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
+                      Pagamento
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Entrega
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Tags
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
                       Valor Total
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {pedidos.map((pedido) => (
-                    <tr key={pedido.id}>
+                    <tr
+                      key={pedido.id}
+                      className="cursor-pointer hover:bg-gray-50"
+                      onClick={() => setPedidoSelecionadoId(pedido.id)}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         #{pedido.id}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(pedido.data_entrega).toLocaleDateString('pt-BR')}
+                        {formatDate(pedido.data_entrega)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        R$ {pedido.total.toFixed(2).replace('.', ',')}
+                        <Badge
+                          className={
+                            normalizeStatus(pedido.status_pagamento) === 'nao pago'
+                              ? 'bg-[#FF5558] text-[#000000]'
+                              : 'bg-[#56FF65] text-[#000000]'
+                          }
+                        >
+                          {pedido.status_pagamento || '-'}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <Badge
+                          className={
+                            normalizeStatus(pedido.status_entrega) === 'nao entregue'
+                              ? 'bg-[#FF5558] text-[#000000]'
+                              : 'bg-[#56FF65] text-[#000000]'
+                          }
+                        >
+                          {pedido.status_entrega || '-'}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div className="flex flex-wrap gap-1">
+                          {pedido.tags && pedido.tags.length > 0 ? (
+                            pedido.tags.map((tag) => (
+                              <TagChip
+                                key={tag.id}
+                                nome={tag.nome}
+                                cor={tag.cor}
+                                className="text-xs"
+                              />
+                            ))
+                          ) : (
+                            <span className="text-xs text-gray-400">-</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatCurrency(pedido.total)}
                       </td>
                     </tr>
                   ))}
@@ -160,6 +261,13 @@ function ClienteDetalhe() {
           )}
         </div>
       </div>
+      <PedidoDetalheDialog
+        pedidoId={pedidoSelecionadoId}
+        open={!!pedidoSelecionadoId}
+        onOpenChange={(open) => {
+          if (!open) setPedidoSelecionadoId(null);
+        }}
+      />
     </>
   );
 }

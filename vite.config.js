@@ -130,7 +130,7 @@ window.fetch = function(...args) {
 			return response;
 		})
 		.catch(error => {
-			if (!url.match(/\.html?$/i)) {
+			if (!url.match(/\\.html?$/i)) {
 				console.error(error);
 			}
 

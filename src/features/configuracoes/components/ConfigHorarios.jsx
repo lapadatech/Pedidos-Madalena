@@ -1,16 +1,16 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useToast } from '@/shared/ui/use-toast';
 
 function ConfigHorarios() {
   const { toast } = useToast();
 
-  React.useEffect(() => {
+  useEffect(() => {
     toast({
       title: '🚧 Funcionalidade em desenvolvimento',
       description: 'A gestão de horários estará disponível em breve!',
       className: 'bg-white text-black font-bold',
     });
-  }, []);
+  }, [toast]);
 
   return (
     <div className="bg-white rounded-lg shadow p-6">

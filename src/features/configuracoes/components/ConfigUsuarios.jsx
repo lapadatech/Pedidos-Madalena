@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -29,7 +29,7 @@ import {
   atualizarUsuario,
   deletarUsuario,
   listarPerfis,
-} from '@/lib/api';
+} from '@/features/configuracoes/services/configuracoesApi';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 function ConfigUsuarios() {
@@ -50,11 +50,7 @@ function ConfigUsuarios() {
 
   const podeExcluir = usuarioLogado?.perfil?.nome === 'Gerente';
 
-  useEffect(() => {
-    carregarDados();
-  }, []);
-
-  const carregarDados = async () => {
+  const carregarDados = useCallback(async () => {
     setCarregando(true);
     try {
       const [usuariosData, perfisData] = await Promise.all([listarUsuarios(), listarPerfis()]);
@@ -69,7 +65,11 @@ function ConfigUsuarios() {
     } finally {
       setCarregando(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    carregarDados();
+  }, [carregarDados]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

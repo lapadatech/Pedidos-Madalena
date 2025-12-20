@@ -11,7 +11,7 @@ import {
   CommandList,
 } from '@/shared/ui/command';
 import { Badge } from '@/shared/ui/badge';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 
 const MultiSelect = forwardRef(({ options, selected, onChange, className, ...props }, ref) => {
   const [open, setOpen] = useState(false);

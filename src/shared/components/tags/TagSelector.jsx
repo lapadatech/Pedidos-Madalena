@@ -10,9 +10,9 @@ import {
   CommandItem,
   CommandList,
 } from '@/shared/ui/command';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import TagChip from '@/shared/components/tags/TagChip';
-import { listarTags } from '@/lib/tagsApi';
+import { listarTags } from '@/features/tags/services/tagsApi';
 import { useToast } from '@/shared/ui/use-toast';
 
 function TagSelector({ selectedTagIds = [], onChange, className }) {
