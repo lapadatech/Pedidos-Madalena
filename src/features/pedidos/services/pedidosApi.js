@@ -262,3 +262,64 @@ export const deletarPedido = async (id) => {
     handleApiError(error, 'deletar pedido');
   }
 };
+
+export const listarResumoPedidosPorClientes = async (clienteIds = []) => {
+  if (!Array.isArray(clienteIds) || clienteIds.length === 0) {
+    return {};
+  }
+
+  try {
+    const { data: pedidosData, error } = await supabase
+      .from('pedidos')
+      .select('id, cliente_id, total, status_pagamento, status_entrega')
+      .in('cliente_id', clienteIds);
+
+    if (error) throw error;
+
+    const pedidos = pedidosData || [];
+    const pedidoIds = pedidos.map((pedido) => pedido.id);
+
+    let tagsPorPedido = {};
+    if (pedidoIds.length > 0) {
+      const { data: pedidoTagsData, error: tagsError } = await supabase
+        .from('pedido_tags')
+        .select('pedido_id, tags(id, nome, cor)')
+        .in('pedido_id', pedidoIds);
+
+      if (tagsError) throw tagsError;
+
+      tagsPorPedido = (pedidoTagsData || []).reduce((acc, row) => {
+        if (!row.tags) return acc;
+        if (!acc[row.pedido_id]) acc[row.pedido_id] = [];
+        acc[row.pedido_id].push(row.tags);
+        return acc;
+      }, {});
+    }
+
+    return pedidos.reduce((acc, pedido) => {
+      const clienteId = pedido.cliente_id;
+      if (!acc[clienteId]) {
+        acc[clienteId] = {
+          count: 0,
+          total: 0,
+          ticket: 0,
+          tags: [],
+        };
+      }
+
+      acc[clienteId].count += 1;
+      acc[clienteId].total += pedido.total || 0;
+
+      const tags = tagsPorPedido[pedido.id] || [];
+      tags.forEach((tag) => {
+        if (!acc[clienteId].tags.some((t) => t.id === tag.id)) {
+          acc[clienteId].tags.push(tag);
+        }
+      });
+
+      return acc;
+    }, {});
+  } catch (error) {
+    handleApiError(error, 'listar resumo de pedidos por clientes');
+  }
+};

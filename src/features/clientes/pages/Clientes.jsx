@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, X, Star, AlertCircle, Loader2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, X, Star, AlertCircle, Loader2, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { UppercaseInput } from '@/shared/ui/UppercaseInput';
@@ -23,7 +24,9 @@ import {
   deletarEndereco,
   buscarClientePorCelular,
 } from '@/features/clientes/services/clientesApi';
+import { listarResumoPedidosPorClientes } from '@/features/pedidos/services/pedidosApi';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import TagChip from '@/shared/components/tags/TagChip';
 
 const maskCelular = (value) => {
   if (!value) return '';
@@ -40,6 +43,9 @@ const maskCep = (value) => {
   value = value.replace(/^(\d{5})(\d)/, '$1-$2');
   return value;
 };
+
+const formatCurrency = (value) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 
 const estadosBrasileiros = [
   'AC',
@@ -110,6 +116,7 @@ function Clientes() {
   const [celularExistente, setCelularExistente] = useState(false);
   const debouncedBusca = useDebouncedValue(busca, 300);
   const debouncedCelular = useDebouncedValue(formData.celular, 500);
+  const [resumoPedidosPorCliente, setResumoPedidosPorCliente] = useState({});
 
   const carregarClientes = useCallback(
     async (termoBusca) => {
@@ -140,6 +147,25 @@ function Clientes() {
   useEffect(() => {
     carregarClientes(debouncedBusca);
   }, [debouncedBusca, carregarClientes]);
+
+  useEffect(() => {
+    const carregarResumo = async () => {
+      if (!clientes.length) {
+        setResumoPedidosPorCliente({});
+        return;
+      }
+
+      try {
+        const ids = clientes.map((cliente) => cliente.id);
+        const resumo = await listarResumoPedidosPorClientes(ids);
+        setResumoPedidosPorCliente(resumo || {});
+      } catch (error) {
+        console.error('Erro ao carregar resumo de pedidos:', error);
+      }
+    };
+
+    carregarResumo();
+  }, [clientes]);
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
@@ -407,6 +433,42 @@ function Clientes() {
     }
   };
   const podeEditar = temPermissao('clientes', 'editar');
+  const handleExportExcel = () => {
+    if (!clientes.length) {
+      toast({
+        title: 'Sem clientes',
+        description: 'Nao ha clientes para exportar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const dataToExport = clientes.map((cliente) => {
+      const resumo = resumoPedidosPorCliente[cliente.id] || { count: 0, total: 0, tags: [] };
+      const ticketMedio = resumo.count > 0 ? resumo.total / resumo.count : 0;
+
+      return {
+        Nome: cliente.nome,
+        Celular: maskCelular(cliente.celular),
+        Email: cliente.email || '',
+        Pedidos: resumo.count,
+        Total: resumo.total || 0,
+        'Ticket Medio': ticketMedio,
+        Tags: resumo.tags.length > 0 ? resumo.tags.map((tag) => tag.nome).join(', ') : '',
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Clientes');
+
+    const today = new Date();
+    const dateStr = `${String(today.getDate()).padStart(2, '0')}-${String(
+      today.getMonth() + 1
+    ).padStart(2, '0')}-${today.getFullYear()}`;
+
+    XLSX.writeFile(workbook, `clientes_${dateStr}.xlsx`);
+  };
 
   return (
     <>
@@ -420,12 +482,18 @@ function Clientes() {
             <h2 className="text-3xl font-bold text-gray-900">Clientes</h2>
             <p className="text-gray-500 mt-1"></p>
           </div>
-          {podeEditar && (
-            <Button className="bg-orange-500 hover:bg-orange-600" onClick={handleNovo}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Cliente
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleExportExcel}>
+              <Download className="h-4 w-4 mr-2" />
+              Exportar Excel
             </Button>
-          )}
+            {podeEditar && (
+              <Button className="bg-orange-500 hover:bg-orange-600" onClick={handleNovo}>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Cliente
+              </Button>
+            )}
+          </div>
         </div>
 
         <Dialog
@@ -672,9 +740,41 @@ function Clientes() {
                       onClick={() => navigate(`/clientes/${cliente.id}`)}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{cliente.nome}</div>
-                        <div className="text-sm text-gray-500">{maskCelular(cliente.celular)}</div>
-                        <div className="text-sm text-gray-500">{cliente.email}</div>
+                        {(() => {
+                          const resumo = resumoPedidosPorCliente[cliente.id] || {
+                            count: 0,
+                            total: 0,
+                            tags: [],
+                          };
+                          const ticketMedio = resumo.count > 0 ? resumo.total / resumo.count : 0;
+                          return (
+                            <>
+                              <div className="text-sm font-medium text-gray-900">
+                                {cliente.nome}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {maskCelular(cliente.celular)}
+                              </div>
+                              <div className="text-sm text-gray-500">{cliente.email}</div>
+                              <div className="mt-2 text-xs text-gray-500">
+                                Pedidos: {resumo.count} | Total: {formatCurrency(resumo.total)} |
+                                Ticket: {formatCurrency(ticketMedio)}
+                              </div>
+                              {resumo.tags.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                  {resumo.tags.map((tag) => (
+                                    <TagChip
+                                      key={tag.id}
+                                      nome={tag.nome}
+                                      cor={tag.cor}
+                                      className="text-xs"
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         {podeEditar && (
