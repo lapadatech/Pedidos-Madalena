@@ -1,13 +1,13 @@
 import React from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import Login from '@/pages/Login';
-import Dashboard from '@/pages/Dashboard';
-import Clientes from '@/pages/Clientes';
-import ClienteDetalhe from '@/pages/ClienteDetalhe';
-import Produtos from '@/pages/Produtos';
-import Pedidos from '@/pages/Pedidos';
-import Configuracoes from '@/pages/Configuracoes';
-import Layout from '@/components/Layout';
+import Login from '@/features/auth/pages/Login';
+import Dashboard from '@/features/dashboard/pages/Dashboard';
+import Clientes from '@/features/clientes/pages/Clientes';
+import ClienteDetalhe from '@/features/clientes/pages/ClienteDetalhe';
+import Produtos from '@/features/produtos/pages/Produtos';
+import Pedidos from '@/features/pedidos/pages/Pedidos';
+import Configuracoes from '@/features/configuracoes/pages/Configuracoes';
+import Layout from '@/shared/components/Layout';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Loader2 } from 'lucide-react';
 

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { authService } from '@/services/authService';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/shared/ui/use-toast';
 
 const AuthContext = createContext(undefined);
 

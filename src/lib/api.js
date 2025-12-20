@@ -3,7 +3,7 @@
 // ======================================================
 
 import { supabase } from '@/lib/customSupabaseClient';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/shared/ui/use-toast';
 
 // Sanitiza termos de busca
 const safeTerm = (term) => (term || '').trim().replace(/[%']/g, '');
@@ -476,8 +476,8 @@ export const criarPedido = async (pedidoData) => {
     const { itens, cliente, ...pedido } = pedidoData;
 
     // REMOVER CAMPOS QUE NÃO EXISTEM NA TABELA PEDIDOS
-    delete pedidoInfo.tag_ids;
-    delete pedidoInfo.tags;
+    delete pedido.tag_ids;
+    delete pedido.tags;
 
     const { data: novoPedido, error: pedidoError } = await supabase
       .from('pedidos')
