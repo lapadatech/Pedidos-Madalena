@@ -26,7 +26,10 @@ export const authService = {
     if (!userId) return null;
     try {
       // First, get the user from the auth schema to ensure we have the email
-      const { data: { user: authUser }, error: authUserError } = await supabase.auth.getUser();
+      const {
+        data: { user: authUser },
+        error: authUserError,
+      } = await supabase.auth.getUser();
       if (authUserError || !authUser) {
         console.error('Error fetching auth user:', authUserError);
         return null;
@@ -35,7 +38,8 @@ export const authService = {
       // Then, get the profile from the public schema
       const { data, error } = await supabase
         .from('usuarios')
-        .select(`
+        .select(
+          `
           id,
           nome,
           perfis (
@@ -43,7 +47,8 @@ export const authService = {
             nome,
             permissoes
           )
-        `)
+        `
+        )
         .eq('id', userId)
         .single();
 
@@ -53,13 +58,13 @@ export const authService = {
         // We should treat this as a failed login.
         return null;
       }
-      
+
       return {
         id: data.id,
         nome: data.nome,
         email: authUser.email, // Use the email from the auth user
         perfil: data.perfis,
-        permissoes: data.perfis?.permissoes || {}
+        permissoes: data.perfis?.permissoes || {},
       };
     } catch (err) {
       console.error('Unexpected error in getUserProfile:', err);
@@ -90,5 +95,5 @@ export const authService = {
    */
   onAuthStateChange(callback) {
     return supabase.auth.onAuthStateChange(callback);
-  }
+  },
 };

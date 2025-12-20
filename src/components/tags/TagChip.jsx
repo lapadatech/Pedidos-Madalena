@@ -8,7 +8,7 @@ function TagChip({ nome, cor, onRemove, className }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium pointer-events-auto select-none",
+        'inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium pointer-events-auto select-none',
         className
       )}
       style={{ backgroundColor: cor, color: textColor }}

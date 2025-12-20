@@ -2,7 +2,5 @@
 
 oi lindaooooooooodasdasdasdashdjashjkdashjksda
 
-
-
 lindoooooioooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
- krl sera q foi?
+krl sera q foi?

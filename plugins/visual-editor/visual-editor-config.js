@@ -77,7 +77,7 @@ export const POPUP_STYLES = `
 `;
 
 export function getPopupHTMLTemplate(saveLabel, cancelLabel) {
-	return `
+  return `
 	<textarea></textarea>
 	<div class="button-container">
 		<button class="popup-button cancel-button">${cancelLabel}</button>

@@ -1,7 +1,13 @@
-
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import TagChip from '@/components/tags/TagChip';
 
 const formatDate = (dateString) => {
@@ -33,16 +39,36 @@ const getStatusEntregaVariant = (status) => {
 
 const SkeletonRow = () => (
   <TableRow>
-    <TableCell><div className="h-6 w-20 rounded bg-gray-200 animate-pulse"></div></TableCell>
-    <TableCell><div className="h-5 w-16 rounded bg-gray-200 animate-pulse"></div></TableCell>
-    <TableCell><div className="h-5 w-40 rounded bg-gray-200 animate-pulse"></div></TableCell>
-    <TableCell><div className="h-5 w-24 rounded bg-gray-200 animate-pulse"></div></TableCell>
-    <TableCell><div className="h-5 w-16 rounded bg-gray-200 animate-pulse"></div></TableCell>
-    <TableCell><div className="h-5 w-20 rounded bg-gray-200 animate-pulse"></div></TableCell>
-    <TableCell><div className="h-5 w-24 rounded bg-gray-200 animate-pulse ml-auto"></div></TableCell>
-    <TableCell><div className="h-6 w-20 rounded bg-gray-200 animate-pulse"></div></TableCell>
-    <TableCell><div className="h-6 w-24 rounded bg-gray-200 animate-pulse"></div></TableCell>
-    <TableCell><div className="h-6 w-32 rounded bg-gray-200 animate-pulse"></div></TableCell>
+    <TableCell>
+      <div className="h-6 w-20 rounded bg-gray-200 animate-pulse"></div>
+    </TableCell>
+    <TableCell>
+      <div className="h-5 w-16 rounded bg-gray-200 animate-pulse"></div>
+    </TableCell>
+    <TableCell>
+      <div className="h-5 w-40 rounded bg-gray-200 animate-pulse"></div>
+    </TableCell>
+    <TableCell>
+      <div className="h-5 w-24 rounded bg-gray-200 animate-pulse"></div>
+    </TableCell>
+    <TableCell>
+      <div className="h-5 w-16 rounded bg-gray-200 animate-pulse"></div>
+    </TableCell>
+    <TableCell>
+      <div className="h-5 w-20 rounded bg-gray-200 animate-pulse"></div>
+    </TableCell>
+    <TableCell>
+      <div className="h-5 w-24 rounded bg-gray-200 animate-pulse ml-auto"></div>
+    </TableCell>
+    <TableCell>
+      <div className="h-6 w-20 rounded bg-gray-200 animate-pulse"></div>
+    </TableCell>
+    <TableCell>
+      <div className="h-6 w-24 rounded bg-gray-200 animate-pulse"></div>
+    </TableCell>
+    <TableCell>
+      <div className="h-6 w-32 rounded bg-gray-200 animate-pulse"></div>
+    </TableCell>
   </TableRow>
 );
 
@@ -69,11 +95,18 @@ function PedidosTabela({ pedidos, onAbrirDetalhe, loading }) {
             Array.from({ length: 10 }).map((_, index) => <SkeletonRow key={index} />)
           ) : pedidos.length > 0 ? (
             pedidos.map((pedido) => {
-              const isConcluido = pedido.status_entrega === 'Entregue' && pedido.status_pagamento === 'Pago';
+              const isConcluido =
+                pedido.status_entrega === 'Entregue' && pedido.status_pagamento === 'Pago';
               return (
-                <TableRow key={pedido.id} onClick={() => onAbrirDetalhe(pedido.id)} className="cursor-pointer hover:bg-gray-50">
+                <TableRow
+                  key={pedido.id}
+                  onClick={() => onAbrirDetalhe(pedido.id)}
+                  className="cursor-pointer hover:bg-gray-50"
+                >
                   <TableCell>
-                    <Badge className={getStatusGeralVariant(isConcluido)}>{isConcluido ? 'Concluído' : 'Aberto'}</Badge>
+                    <Badge className={getStatusGeralVariant(isConcluido)}>
+                      {isConcluido ? 'Concluído' : 'Aberto'}
+                    </Badge>
                   </TableCell>
                   <TableCell className="font-medium">#{pedido.id}</TableCell>
                   <TableCell>{pedido.cliente_nome}</TableCell>
@@ -82,15 +115,19 @@ function PedidosTabela({ pedidos, onAbrirDetalhe, loading }) {
                   <TableCell>{pedido.tipo_entrega}</TableCell>
                   <TableCell className="text-right">{formatCurrency(pedido.total)}</TableCell>
                   <TableCell>
-                    <Badge className={getStatusPagamentoVariant(pedido.status_pagamento)}>{pedido.status_pagamento}</Badge>
+                    <Badge className={getStatusPagamentoVariant(pedido.status_pagamento)}>
+                      {pedido.status_pagamento}
+                    </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusEntregaVariant(pedido.status_entrega)}>{pedido.status_entrega}</Badge>
+                    <Badge className={getStatusEntregaVariant(pedido.status_entrega)}>
+                      {pedido.status_entrega}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {pedido.tags && pedido.tags.length > 0 ? (
-                        pedido.tags.map(tag => (
+                        pedido.tags.map((tag) => (
                           <TagChip key={tag.id} nome={tag.nome} cor={tag.cor} className="text-xs" />
                         ))
                       ) : (

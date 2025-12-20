@@ -31,7 +31,7 @@ function CriarPedidoStep1({ onProximo, dadosIniciais }) {
     }
     return formatado;
   };
-  
+
   const handleCelularChange = (e) => {
     setCelular(formatarCelular(e.target.value));
   };
@@ -39,9 +39,9 @@ function CriarPedidoStep1({ onProximo, dadosIniciais }) {
   const handleBuscar = async () => {
     if (celular.replace(/\D/g, '').length < 11) {
       toast({
-        title: "Celular inválido",
-        description: "Digite um número de celular com 11 dígitos.",
-        variant: "destructive",
+        title: 'Celular inválido',
+        description: 'Digite um número de celular com 11 dígitos.',
+        variant: 'destructive',
       });
       return;
     }
@@ -52,45 +52,56 @@ function CriarPedidoStep1({ onProximo, dadosIniciais }) {
       if (cliente) {
         setClienteEncontrado(cliente);
         setMostrarCadastro(false);
-        toast({ title: "Cliente encontrado!", });
+        toast({ title: 'Cliente encontrado!' });
       } else {
         setClienteEncontrado(null);
         setMostrarCadastro(true);
         toast({
-          title: "Cliente não encontrado",
-          description: "Cadastre um novo cliente abaixo.",
-          variant: "default",
+          title: 'Cliente não encontrado',
+          description: 'Cadastre um novo cliente abaixo.',
+          variant: 'default',
         });
       }
     } catch (error) {
-        toast({ title: "Erro ao buscar cliente", description: error.message, variant: "destructive" });
+      toast({
+        title: 'Erro ao buscar cliente',
+        description: error.message,
+        variant: 'destructive',
+      });
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
   const handleCadastroRapido = async () => {
     if (!nomeCliente) {
-      toast({ title: "Digite o nome do cliente", variant: "destructive" });
+      toast({ title: 'Digite o nome do cliente', variant: 'destructive' });
       return;
     }
-    
+
     setLoading(true);
     try {
-        const [novoCliente] = await criarCliente({ nome: nomeCliente, celular: celular.replace(/\D/g, '') });
-        setClienteEncontrado(novoCliente);
-        setMostrarCadastro(false);
-        toast({ title: "Cliente cadastrado com sucesso!" });
+      const [novoCliente] = await criarCliente({
+        nome: nomeCliente,
+        celular: celular.replace(/\D/g, ''),
+      });
+      setClienteEncontrado(novoCliente);
+      setMostrarCadastro(false);
+      toast({ title: 'Cliente cadastrado com sucesso!' });
     } catch (error) {
-        toast({ title: "Erro ao cadastrar cliente", description: error.message, variant: "destructive" });
+      toast({
+        title: 'Erro ao cadastrar cliente',
+        description: error.message,
+        variant: 'destructive',
+      });
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
   const handleProximo = () => {
     if (!clienteEncontrado) {
-      toast({ title: "Selecione um cliente para continuar", variant: "destructive" });
+      toast({ title: 'Selecione um cliente para continuar', variant: 'destructive' });
       return;
     }
     onProximo({ cliente: clienteEncontrado });
@@ -109,8 +120,16 @@ function CriarPedidoStep1({ onProximo, dadosIniciais }) {
             maxLength="15"
             disabled={loading}
           />
-          <Button onClick={handleBuscar} disabled={loading} className="bg-orange-500 hover:bg-orange-600">
-             {loading ? <Loader2 className="h-4 w-4 animate-spin"/> : <Search className="h-4 w-4" />}
+          <Button
+            onClick={handleBuscar}
+            disabled={loading}
+            className="bg-orange-500 hover:bg-orange-600"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Search className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </div>
@@ -137,8 +156,16 @@ function CriarPedidoStep1({ onProximo, dadosIniciais }) {
               disabled={loading}
             />
           </div>
-          <Button onClick={handleCadastroRapido} disabled={loading} className="w-full bg-orange-500 hover:bg-orange-600">
-             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : <Plus className="h-4 w-4 mr-2" />}
+          <Button
+            onClick={handleCadastroRapido}
+            disabled={loading}
+            className="w-full bg-orange-500 hover:bg-orange-600"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Plus className="h-4 w-4 mr-2" />
+            )}
             Cadastrar e Selecionar
           </Button>
         </div>

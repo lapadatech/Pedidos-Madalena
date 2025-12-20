@@ -2,7 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import TagChip from '@/components/tags/TagChip';
 import { listarTags } from '@/lib/tagsApi';
@@ -23,38 +30,40 @@ function TagSelector({ selectedTagIds = [], onChange, className }) {
         }
       } catch (error) {
         if (mounted) {
-          console.error("Erro ao carregar tags:", error);
+          console.error('Erro ao carregar tags:', error);
           toast({
-            title: "Erro ao carregar tags",
-            description: "Não foi possível carregar a lista de tags.",
-            variant: "destructive"
+            title: 'Erro ao carregar tags',
+            description: 'Não foi possível carregar a lista de tags.',
+            variant: 'destructive',
           });
         }
       }
     };
     loadTags();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [toast]);
 
   const handleSelect = (tagId) => {
     // Ensure we are working with arrays
     const currentSelected = Array.isArray(selectedTagIds) ? selectedTagIds : [];
-    
+
     const isSelected = currentSelected.includes(tagId);
     let newSelection;
-    
+
     if (isSelected) {
-      newSelection = currentSelected.filter(id => id !== tagId);
+      newSelection = currentSelected.filter((id) => id !== tagId);
     } else {
       newSelection = [...currentSelected, tagId];
     }
-    
+
     onChange(newSelection);
   };
 
   // Safe filter
-  const selectedTags = tags.filter(tag => 
-    Array.isArray(selectedTagIds) && selectedTagIds.includes(tag.id)
+  const selectedTags = tags.filter(
+    (tag) => Array.isArray(selectedTagIds) && selectedTagIds.includes(tag.id)
   );
 
   return (
@@ -64,7 +73,7 @@ function TagSelector({ selectedTagIds = [], onChange, className }) {
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-full justify-between h-auto min-h-[42px] p-2 bg-white", className)}
+          className={cn('w-full justify-between h-auto min-h-[42px] p-2 bg-white', className)}
         >
           <div className="flex gap-1.5 flex-wrap items-center w-full">
             {selectedTags.length > 0 ? (
@@ -98,16 +107,17 @@ function TagSelector({ selectedTagIds = [], onChange, className }) {
                     onSelect={() => handleSelect(tag.id)}
                     className="cursor-pointer !pointer-events-auto"
                   >
-                    <div className={cn(
-                      "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary/50",
-                      isSelected ? "bg-primary border-primary text-primary-foreground" : "opacity-50 [&_svg]:invisible"
-                    )}>
+                    <div
+                      className={cn(
+                        'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary/50',
+                        isSelected
+                          ? 'bg-primary border-primary text-primary-foreground'
+                          : 'opacity-50 [&_svg]:invisible'
+                      )}
+                    >
                       <Check className="h-3 w-3" />
                     </div>
-                    <TagChip 
-                      nome={tag.nome} 
-                      cor={tag.cor} 
-                    />
+                    <TagChip nome={tag.nome} cor={tag.cor} />
                   </CommandItem>
                 );
               })}

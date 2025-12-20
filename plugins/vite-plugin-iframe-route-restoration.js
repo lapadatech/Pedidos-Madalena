@@ -117,9 +117,9 @@ export default function iframeRouteRestorationPlugin() {
           tag: 'script',
           attrs: { type: 'module' },
           children: script,
-          injectTo: 'head'
-        }
+          injectTo: 'head',
+        },
       ];
-    }
+    },
   };
 }

@@ -3,7 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, Key } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import AlterarSenhaDialog from '@/components/AlterarSenhaDialog';
 
@@ -11,13 +16,19 @@ function Header() {
   const { usuario, signOut } = useAuth();
   const navigate = useNavigate();
   const [dialogSenhaAberto, setDialogSenhaAberto] = useState(false);
-  
+
   const handleLogout = async () => {
     await signOut();
     navigate('/login');
   };
 
-  const iniciais = usuario?.nome?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
+  const iniciais =
+    usuario?.nome
+      ?.split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || 'U';
 
   return (
     <>
@@ -38,9 +49,7 @@ function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar>
-                    <AvatarFallback className="bg-orange-500 text-white">
-                      {iniciais}
-                    </AvatarFallback>
+                    <AvatarFallback className="bg-orange-500 text-white">{iniciais}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>

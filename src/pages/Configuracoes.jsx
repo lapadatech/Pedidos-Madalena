@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
@@ -44,15 +43,13 @@ function Configuracoes() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="bg-white rounded-lg shadow p-4">
             <nav className="space-y-1">
-              {menuItems.map(item => (
+              {menuItems.map((item) => (
                 <NavLink
                   key={item.path}
                   to={item.path}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-orange-50 text-orange-600'
-                        : 'text-gray-700 hover:bg-gray-100'
+                      isActive ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-100'
                     }`
                   }
                 >

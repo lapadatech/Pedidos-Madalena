@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/components/ui/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +25,11 @@ function AlterarSenhaDialog({ open, onOpenChange }) {
     e.preventDefault();
 
     if (newPassword.length < 6) {
-      toast({ title: 'Senha muito curta', description: 'A senha deve ter no mínimo 6 caracteres.', variant: 'destructive' });
+      toast({
+        title: 'Senha muito curta',
+        description: 'A senha deve ter no mínimo 6 caracteres.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -43,8 +54,8 @@ function AlterarSenhaDialog({ open, onOpenChange }) {
 
   const handleOpenChange = (isOpen) => {
     if (!isOpen) {
-        setNewPassword('');
-        setConfirmPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
     }
     onOpenChange(isOpen);
   };
@@ -78,7 +89,9 @@ function AlterarSenhaDialog({ open, onOpenChange }) {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-                <Button type="button" variant="outline">Cancelar</Button>
+              <Button type="button" variant="outline">
+                Cancelar
+              </Button>
             </DialogClose>
             <Button type="submit" disabled={loading} className="bg-orange-500 hover:bg-orange-600">
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

@@ -6,9 +6,9 @@ function ConfigHorarios() {
 
   React.useEffect(() => {
     toast({
-      title: "🚧 Funcionalidade em desenvolvimento",
-      description: "A gestão de horários estará disponível em breve!",
-      className: "bg-white text-black font-bold"
+      title: '🚧 Funcionalidade em desenvolvimento',
+      description: 'A gestão de horários estará disponível em breve!',
+      className: 'bg-white text-black font-bold',
     });
   }, []);
 

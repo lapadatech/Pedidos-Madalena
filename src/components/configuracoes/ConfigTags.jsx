@@ -1,11 +1,16 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UppercaseInput } from '@/components/ui/UppercaseInput';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { listarTags, criarTag, atualizarTag, deletarTag } from '@/lib/tagsApi';
 import TagChip from '@/components/tags/TagChip';
@@ -28,31 +33,31 @@ function ConfigTags() {
       setTags(dados);
     } catch (error) {
       toast({
-        title: "Erro ao carregar tags",
+        title: 'Erro ao carregar tags',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       if (tagSelecionada) {
         await atualizarTag(tagSelecionada.id, { nome, cor });
         toast({
-          title: "Tag atualizada!",
-          className: "bg-white text-black font-bold"
+          title: 'Tag atualizada!',
+          className: 'bg-white text-black font-bold',
         });
       } else {
         await criarTag({ nome, cor });
         toast({
-          title: "Tag criada!",
-          className: "bg-white text-black font-bold"
+          title: 'Tag criada!',
+          className: 'bg-white text-black font-bold',
         });
       }
-      
+
       await carregarTags();
       setDialogAberto(false);
       setNome('');
@@ -60,9 +65,9 @@ function ConfigTags() {
       setTagSelecionada(null);
     } catch (error) {
       toast({
-        title: "Erro ao salvar",
+        title: 'Erro ao salvar',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     }
   };
@@ -79,15 +84,15 @@ function ConfigTags() {
       try {
         await deletarTag(id);
         toast({
-          title: "Tag excluída!",
-          className: "bg-white text-black font-bold"
+          title: 'Tag excluída!',
+          className: 'bg-white text-black font-bold',
         });
         await carregarTags();
       } catch (error) {
         toast({
-          title: "Erro ao excluir",
-          description: "Não é possível excluir uma tag que está em uso.",
-          variant: "destructive",
+          title: 'Erro ao excluir',
+          description: 'Não é possível excluir uma tag que está em uso.',
+          variant: 'destructive',
         });
       }
     }
@@ -108,14 +113,17 @@ function ConfigTags() {
     <div className="bg-white rounded-lg shadow">
       <div className="p-4 border-b flex items-center justify-between">
         <h3 className="font-semibold">Tags</h3>
-        <Dialog open={dialogAberto} onOpenChange={(open) => {
-          setDialogAberto(open);
-          if (!open) {
-            setNome('');
-            setCor('#FF9921');
-            setTagSelecionada(null);
-          }
-        }}>
+        <Dialog
+          open={dialogAberto}
+          onOpenChange={(open) => {
+            setDialogAberto(open);
+            if (!open) {
+              setNome('');
+              setCor('#FF9921');
+              setTagSelecionada(null);
+            }
+          }}
+        >
           <DialogTrigger asChild>
             <Button size="sm" className="bg-orange-500 hover:bg-orange-600">
               <Plus className="h-4 w-4 mr-2" />
@@ -124,9 +132,7 @@ function ConfigTags() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>
-                {tagSelecionada ? 'Editar Tag' : 'Nova Tag'}
-              </DialogTitle>
+              <DialogTitle>{tagSelecionada ? 'Editar Tag' : 'Nova Tag'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -154,7 +160,7 @@ function ConfigTags() {
                 <div className="mt-3">
                   <Label className="text-xs text-gray-500">Cores sugeridas:</Label>
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {coresComuns.map(corSugerida => (
+                    {coresComuns.map((corSugerida) => (
                       <button
                         key={corSugerida}
                         type="button"
@@ -182,10 +188,7 @@ function ConfigTags() {
                 >
                   Cancelar
                 </Button>
-                <Button
-                  type="submit"
-                  className="flex-1 bg-orange-500 hover:bg-orange-600"
-                >
+                <Button type="submit" className="flex-1 bg-orange-500 hover:bg-orange-600">
                   Salvar
                 </Button>
               </div>
@@ -202,18 +205,10 @@ function ConfigTags() {
           >
             <TagChip nome={tag.nome} cor={tag.cor} />
             <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleEditar(tag)}
-              >
+              <Button variant="ghost" size="icon" onClick={() => handleEditar(tag)}>
                 <Edit className="h-4 w-4" />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleDeletar(tag.id)}
-              >
+              <Button variant="ghost" size="icon" onClick={() => handleDeletar(tag.id)}>
                 <Trash2 className="h-4 w-4 text-red-500" />
               </Button>
             </div>

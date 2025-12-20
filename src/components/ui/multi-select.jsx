@@ -2,7 +2,14 @@ import React, { useState, forwardRef } from 'react';
 import { Check, ChevronsUpDown, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -10,10 +17,12 @@ const MultiSelect = forwardRef(({ options, selected, onChange, className, ...pro
   const [open, setOpen] = useState(false);
 
   const handleSelect = (value) => {
-    onChange(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]);
+    onChange(
+      selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]
+    );
   };
 
-  const selectedOptions = options.filter(option => selected.includes(option.value));
+  const selectedOptions = options.filter((option) => selected.includes(option.value));
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -23,7 +32,7 @@ const MultiSelect = forwardRef(({ options, selected, onChange, className, ...pro
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-full justify-between h-auto", className)}
+          className={cn('w-full justify-between h-auto', className)}
           onClick={() => setOpen(!open)}
         >
           <div className="flex gap-1 flex-wrap">
@@ -56,14 +65,11 @@ const MultiSelect = forwardRef(({ options, selected, onChange, className, ...pro
             <CommandEmpty>Nenhum item encontrado.</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
-                <CommandItem
-                  key={option.value}
-                  onSelect={() => handleSelect(option.value)}
-                >
+                <CommandItem key={option.value} onSelect={() => handleSelect(option.value)}>
                   <Check
                     className={cn(
-                      "mr-2 h-4 w-4",
-                      selected.includes(option.value) ? "opacity-100" : "opacity-0"
+                      'mr-2 h-4 w-4',
+                      selected.includes(option.value) ? 'opacity-100' : 'opacity-0'
                     )}
                   />
                   {option.label}

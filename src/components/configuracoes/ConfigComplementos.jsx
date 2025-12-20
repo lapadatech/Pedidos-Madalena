@@ -5,9 +5,20 @@ import { Input } from '@/components/ui/input';
 import { UppercaseInput } from '@/components/ui/UppercaseInput';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
-import { listarGruposComplementos, criarGrupoComplemento, atualizarGrupoComplemento, deletarGrupoComplemento } from '@/lib/api';
+import {
+  listarGruposComplementos,
+  criarGrupoComplemento,
+  atualizarGrupoComplemento,
+  deletarGrupoComplemento,
+} from '@/lib/api';
 
 const formatCurrency = (value) => {
   if (typeof value !== 'number') return 'R$ 0,00';
@@ -22,7 +33,7 @@ function ConfigComplementos() {
   const [formData, setFormData] = useState({
     nome: '',
     obrigatorio: false,
-    opcoes: [{ nome: '', preco_adicional: 0 }]
+    opcoes: [{ nome: '', preco_adicional: 0 }],
   });
   const { toast } = useToast();
 
@@ -35,7 +46,11 @@ function ConfigComplementos() {
       const data = await listarGruposComplementos();
       setGrupos(data);
     } catch (error) {
-      toast({ title: "Erro ao carregar grupos", description: error.message, variant: 'destructive' });
+      toast({
+        title: 'Erro ao carregar grupos',
+        description: error.message,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -65,26 +80,26 @@ function ConfigComplementos() {
     try {
       const dataToSave = {
         ...formData,
-        opcoes: formData.opcoes.filter(op => op.nome.trim() !== '')
+        opcoes: formData.opcoes.filter((op) => op.nome.trim() !== ''),
       };
 
       if (grupoSelecionado) {
         await atualizarGrupoComplemento(grupoSelecionado.id, dataToSave);
-        toast({ title: "Grupo atualizado!" });
+        toast({ title: 'Grupo atualizado!' });
       } else {
         await criarGrupoComplemento(dataToSave);
-        toast({ title: "Grupo criado!" });
+        toast({ title: 'Grupo criado!' });
       }
       await carregarGrupos();
       setDialogAberto(false);
       resetForm();
     } catch (error) {
-      toast({ title: "Erro ao salvar", description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro ao salvar', description: error.message, variant: 'destructive' });
     } finally {
       setCarregando(false);
     }
   };
-  
+
   const resetForm = () => {
     setFormData({ nome: '', obrigatorio: false, opcoes: [{ nome: '', preco_adicional: 0 }] });
     setGrupoSelecionado(null);
@@ -100,7 +115,8 @@ function ConfigComplementos() {
     setFormData({
       nome: grupo.nome,
       obrigatorio: grupo.obrigatorio || false,
-      opcoes: grupo.opcoes && grupo.opcoes.length > 0 ? grupo.opcoes : [{ nome: '', preco_adicional: 0 }]
+      opcoes:
+        grupo.opcoes && grupo.opcoes.length > 0 ? grupo.opcoes : [{ nome: '', preco_adicional: 0 }],
     });
     setDialogAberto(true);
   };
@@ -109,10 +125,14 @@ function ConfigComplementos() {
     if (window.confirm('Deseja realmente excluir este grupo?')) {
       try {
         await deletarGrupoComplemento(id);
-        toast({ title: "Grupo excluído!" });
+        toast({ title: 'Grupo excluído!' });
         await carregarGrupos();
       } catch (error) {
-        toast({ title: "Erro ao excluir", description: "Verifique se o grupo não está associado a um produto.", variant: 'destructive' });
+        toast({
+          title: 'Erro ao excluir',
+          description: 'Verifique se o grupo não está associado a um produto.',
+          variant: 'destructive',
+        });
       }
     }
   };
@@ -122,8 +142,8 @@ function ConfigComplementos() {
       <div className="p-4 border-b flex items-center justify-between">
         <h3 className="font-semibold">Grupos de Complementos</h3>
         <Button size="sm" className="bg-orange-500 hover:bg-orange-600" onClick={handleNovo}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Grupo
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Grupo
         </Button>
         <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
           <DialogContent className="max-w-2xl">
@@ -134,11 +154,22 @@ function ConfigComplementos() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="nome">Nome do Grupo *</Label>
-                  <UppercaseInput id="nome" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} required />
+                  <UppercaseInput
+                    id="nome"
+                    value={formData.nome}
+                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                    required
+                  />
                 </div>
                 <div className="flex items-end pb-2">
                   <div className="flex items-center gap-2">
-                    <Switch id="obrigatorio" checked={formData.obrigatorio} onCheckedChange={(checked) => setFormData({ ...formData, obrigatorio: checked })} />
+                    <Switch
+                      id="obrigatorio"
+                      checked={formData.obrigatorio}
+                      onCheckedChange={(checked) =>
+                        setFormData({ ...formData, obrigatorio: checked })
+                      }
+                    />
                     <Label htmlFor="obrigatorio">Obrigatório</Label>
                   </div>
                 </div>
@@ -148,9 +179,28 @@ function ConfigComplementos() {
                 <div className="space-y-3 mt-2">
                   {formData.opcoes.map((opcao, index) => (
                     <div key={index} className="flex items-center gap-2">
-                      <UppercaseInput placeholder="Nome da opção" value={opcao.nome} onChange={(e) => handleOpcaoChange(index, 'nome', e.target.value)} />
-                      <Input type="number" step="0.01" placeholder="Preço Adicional" value={opcao.preco_adicional} onChange={(e) => handleOpcaoChange(index, 'preco_adicional', e.target.value)} className="w-40" />
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removerOpcao(index)} disabled={formData.opcoes.length <= 1}>
+                      <UppercaseInput
+                        placeholder="Nome da opção"
+                        value={opcao.nome}
+                        onChange={(e) => handleOpcaoChange(index, 'nome', e.target.value)}
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Preço Adicional"
+                        value={opcao.preco_adicional}
+                        onChange={(e) =>
+                          handleOpcaoChange(index, 'preco_adicional', e.target.value)
+                        }
+                        className="w-40"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removerOpcao(index)}
+                        disabled={formData.opcoes.length <= 1}
+                      >
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
@@ -161,8 +211,19 @@ function ConfigComplementos() {
                 </div>
               </div>
               <div className="flex gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setDialogAberto(false)} className="flex-1">Cancelar</Button>
-                <Button type="submit" disabled={carregando} className="flex-1 bg-orange-500 hover:bg-orange-600">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDialogAberto(false)}
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={carregando}
+                  className="flex-1 bg-orange-500 hover:bg-orange-600"
+                >
                   {carregando ? 'Salvando...' : 'Salvar'}
                 </Button>
               </div>
@@ -175,10 +236,18 @@ function ConfigComplementos() {
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome do Grupo</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Opções</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Obrigatório</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Nome do Grupo
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Opções
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                Obrigatório
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                Ações
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -195,7 +264,9 @@ function ConfigComplementos() {
                   </div>
                 </td>
                 <td className="px-6 py-4 text-center text-sm">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${grupo.obrigatorio ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  <span
+                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${grupo.obrigatorio ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+                  >
                     {grupo.obrigatorio ? 'Sim' : 'Não'}
                   </span>
                 </td>

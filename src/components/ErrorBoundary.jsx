@@ -14,7 +14,7 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     // Você também pode logar o erro para um serviço de reporte de erros
-    console.error("Uncaught error:", error, errorInfo);
+    console.error('Uncaught error:', error, errorInfo);
     this.setState({ errorInfo });
   }
 
@@ -26,7 +26,8 @@ class ErrorBoundary extends React.Component {
           <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
             <h1 className="text-2xl font-bold text-red-600 mb-4">Ocorreu um erro inesperado.</h1>
             <p className="text-gray-700 mb-6">
-              Nossa equipe já foi notificada. Tente recarregar a página ou voltar para a tela inicial.
+              Nossa equipe já foi notificada. Tente recarregar a página ou voltar para a tela
+              inicial.
             </p>
             <Button
               onClick={() => window.location.reload()}
