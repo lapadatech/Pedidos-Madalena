@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { Plus, Download, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -19,6 +19,7 @@ import { ToastAction } from '@/shared/ui/toast';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import TagSelector from '@/shared/components/tags/TagSelector';
+// useRef já importado na linha principal
 
 const initialState = {
   cliente: null,
@@ -63,6 +64,62 @@ function Pedidos() {
 
   const { temPermissao, lojaAtual } = useAuth();
   const { toast } = useToast();
+  const saveTimeoutRef = useRef(null);
+
+  const storageKey = lojaAtual?.slug ? `pedidoWizardState_${lojaAtual.slug}` : 'pedidoWizardState';
+  const detalheStorageKey = lojaAtual?.slug ? `pedidoDetalhe_${lojaAtual.slug}` : 'pedidoDetalhe';
+
+  const limparWizardStorage = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(storageKey);
+  }, [storageKey]);
+
+  // Reidrata wizard ao reabrir o navegador se houver dados salvos
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!lojaAtual || wizardAberto) return;
+
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved?.lojaSlug && lojaAtual.slug !== saved.lojaSlug) return;
+
+      setDadosPedido(saved.dadosPedido || initialState);
+      setEtapaAtual(saved.etapaAtual || 1);
+      setEditMode(!!saved.editMode);
+      setWizardAberto(true);
+    } catch (err) {
+      console.error('Erro ao restaurar wizard do pedido:', err);
+      limparWizardStorage();
+    }
+  }, [lojaAtual, storageKey, wizardAberto, limparWizardStorage]);
+
+  // Persiste estado do wizard enquanto estiver aberto
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!wizardAberto) {
+      limparWizardStorage();
+      return;
+    }
+
+    const payload = {
+      lojaSlug: lojaAtual?.slug,
+      etapaAtual,
+      dadosPedido,
+      editMode,
+    };
+
+    // debounce para evitar gravações em excesso
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(payload));
+      } catch (err) {
+        console.error('Erro ao salvar wizard do pedido:', err);
+      }
+    }, 150);
+  }, [wizardAberto, etapaAtual, dadosPedido, editMode, storageKey, lojaAtual, limparWizardStorage]);
 
   const carregarPedidos = useCallback(async () => {
     setLoading(true);
@@ -119,6 +176,25 @@ function Pedidos() {
     carregarPedidos();
   }, [carregarPedidos]);
 
+  // Restaurar dialog de detalhes se estava aberto
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!lojaAtual) return;
+    try {
+      const raw = localStorage.getItem(detalheStorageKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved?.lojaSlug && saved.lojaSlug !== lojaAtual.slug) return;
+      if (saved?.pedidoId) {
+        setPedidoSelecionadoId(saved.pedidoId);
+        setDetalheDialogAberto(true);
+      }
+    } catch (err) {
+      console.error('Erro ao restaurar dialog de pedido:', err);
+      localStorage.removeItem(detalheStorageKey);
+    }
+  }, [lojaAtual, detalheStorageKey]);
+
   useEffect(() => {
     setCurrentPage(1);
   }, [busca, filtroStatus, filtroPagamento, filtroEntrega, filtroTagIds, activeTab]);
@@ -130,6 +206,7 @@ function Pedidos() {
     setEtapaAtual(1);
     setDadosPedido(initialState);
     setEditMode(false);
+    limparWizardStorage();
   };
 
   const handleProximaEtapa = (dados) => {
@@ -152,18 +229,30 @@ function Pedidos() {
   const handleAbrirDetalhe = (id) => {
     setPedidoSelecionadoId(id);
     setDetalheDialogAberto(true);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(
+        detalheStorageKey,
+        JSON.stringify({ lojaSlug: lojaAtual?.slug, pedidoId: id })
+      );
+    }
   };
 
   const handleFecharDetalhe = () => {
     setPedidoSelecionadoId(null);
     setDetalheDialogAberto(false);
     carregarPedidos();
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(detalheStorageKey);
+    }
   };
 
   const handlePedidoDeletado = () => {
     setDetalheDialogAberto(false);
     setPedidoSelecionadoId(null);
     carregarPedidos();
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(detalheStorageKey);
+    }
   };
 
   const handleIniciarEdicao = (pedidoParaEditar) => {
