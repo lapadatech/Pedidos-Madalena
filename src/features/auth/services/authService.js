@@ -123,58 +123,59 @@ export const authService = {
 
         if (accessError) {
           console.error('Error fetching user stores:', accessError.message);
-          return null;
-        }
+          lojas = [];
+        } else {
 
-        const storeIds = (accessRows || []).map((r) => r.store_id).filter(Boolean);
-        const rolesIds = (accessRows || []).map((r) => r.role).filter(Boolean);
+          const storeIds = (accessRows || []).map((r) => r.store_id).filter(Boolean);
+          const rolesIds = (accessRows || []).map((r) => r.role).filter(Boolean);
 
-        let storesById = {};
-        if (storeIds.length > 0) {
-          const { data: storesRows, error: storesError } = await supabase
-            .from('stores')
-            .select('id, name, slug, active')
-            .in('id', storeIds);
-          if (storesError) {
-            console.error('Error fetching stores for user:', storesError.message);
-            return null;
+          let storesById = {};
+          if (storeIds.length > 0) {
+            const { data: storesRows, error: storesError } = await supabase
+              .from('stores')
+              .select('id, name, slug, active')
+              .in('id', storeIds);
+            if (storesError) {
+              console.error('Error fetching stores for user:', storesError.message);
+            } else {
+              storesById = (storesRows || []).reduce((acc, s) => {
+                acc[s.id] = s;
+                return acc;
+              }, {});
+            }
           }
-          storesById = (storesRows || []).reduce((acc, s) => {
-            acc[s.id] = s;
-            return acc;
-          }, {});
-        }
 
-        let rolesById = {};
-        if (rolesIds.length > 0) {
-          const { data: rolesRows, error: rolesError } = await supabase
-            .from('store_roles')
-            .select('id, name, permissions')
-            .in('id', rolesIds);
-          if (rolesError) {
-            console.error('Error fetching store roles:', rolesError.message);
-          } else {
-            rolesById = (rolesRows || []).reduce((acc, r) => {
-              acc[r.id] = r;
-              return acc;
-            }, {});
+          let rolesById = {};
+          if (rolesIds.length > 0) {
+            const { data: rolesRows, error: rolesError } = await supabase
+              .from('store_roles')
+              .select('id, name, permissions')
+              .in('id', rolesIds);
+            if (rolesError) {
+              console.error('Error fetching store roles:', rolesError.message);
+            } else {
+              rolesById = (rolesRows || []).reduce((acc, r) => {
+                acc[r.id] = r;
+                return acc;
+              }, {});
+            }
           }
-        }
 
-        lojas = (accessRows || [])
-          .map((row) => {
-            const store = storesById[row.store_id];
-            const roleRow = rolesById[row.role];
-            return {
-              id: store?.id || row.store_id,
-              nome: store?.name,
-              slug: store?.slug,
-              ativo: store?.active ?? true,
-              role: row.role,
-              perfil: buildPerfil(row.role, roleRow),
-            };
-          })
-          .filter((loja) => loja.id && loja.slug);
+          lojas = (accessRows || [])
+            .map((row) => {
+              const store = storesById[row.store_id];
+              const roleRow = rolesById[row.role];
+              return {
+                id: store?.id || row.store_id,
+                nome: store?.name,
+                slug: store?.slug,
+                ativo: store?.active ?? true,
+                role: row.role,
+                perfil: buildPerfil(row.role, roleRow),
+              };
+            })
+            .filter((loja) => loja.id && loja.slug);
+        }
       }
 
       return {
@@ -190,7 +191,13 @@ export const authService = {
       };
     } catch (err) {
       console.error('Unexpected error in getUserProfile:', err);
-      return null;
+      return {
+        id: userId,
+        nome: 'USUARIO',
+        email: null,
+        lojas: [],
+        is_admin: false,
+      };
     }
   },
 
