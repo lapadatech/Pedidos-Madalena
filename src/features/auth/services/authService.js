@@ -4,7 +4,11 @@ const buildPerfilFallback = (role) => {
   if (!role)
     return {
       nome: 'Atendente',
-      permissoes: { pedidos: '*', clientes: { visualizar: true, editar: true }, produtos: { visualizar: true } },
+      permissoes: {
+        pedidos: '*',
+        clientes: { visualizar: true, editar: true },
+        produtos: { visualizar: true },
+      },
     };
   const normalized = role.toLowerCase();
   if (normalized === 'gerente') {
@@ -15,7 +19,11 @@ const buildPerfilFallback = (role) => {
   }
   return {
     nome: normalized.charAt(0).toUpperCase() + normalized.slice(1),
-    permissoes: { pedidos: '*', clientes: { visualizar: true, editar: true }, produtos: { visualizar: true } },
+    permissoes: {
+      pedidos: '*',
+      clientes: { visualizar: true, editar: true },
+      produtos: { visualizar: true },
+    },
   };
 };
 
@@ -65,9 +73,12 @@ export const authService = {
       // Preferir a Edge Function (service role) para evitar stack depth / RLS.
       // Se falhar (401/404/etc), seguimos para o fallback direto no banco.
       try {
-        const { data: fnData, error: fnError } = await supabase.functions.invoke('get-user-profile', {
-          body: { storeSlug: currentSlug },
-        });
+        const { data: fnData, error: fnError } = await supabase.functions.invoke(
+          'get-user-profile',
+          {
+            body: { storeSlug: currentSlug },
+          }
+        );
         if (fnError) {
           console.error('Error invoking get-user-profile function:', fnError);
         } else if (fnData) {
@@ -125,7 +136,6 @@ export const authService = {
           console.error('Error fetching user stores:', accessError.message);
           lojas = [];
         } else {
-
           const storeIds = (accessRows || []).map((r) => r.store_id).filter(Boolean);
           const rolesIds = (accessRows || []).map((r) => r.role).filter(Boolean);
 

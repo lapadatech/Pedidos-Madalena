@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
@@ -7,10 +7,20 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { useToast } from '@/shared/ui/use-toast';
+import { supabase } from '@/shared/lib/customSupabaseClient';
 
 function Login() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  const formatSlugToName = (value) =>
+    (value || '')
+      .split(/[-_]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+
+  const [storeName, setStoreName] = useState(formatSlugToName(useParams().slug || ''));
+  const [loadingStore, setLoadingStore] = useState(false);
   const [carregando, setCarregando] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -21,6 +31,35 @@ function Login() {
     () => (slug ? `Login ${slug} - Gestor de Pedidos` : 'Login - Gestor de Pedidos'),
     [slug]
   );
+
+  useEffect(() => {
+    const fetchStoreName = async () => {
+      if (!slug) return;
+      try {
+        setLoadingStore(true);
+        const { data, error } = await supabase
+          .from('stores')
+          .select('name')
+          .eq('slug', slug)
+          .limit(1)
+          .maybeSingle();
+        if (error) {
+          console.error('Erro ao buscar loja:', error.message);
+          setStoreName((prev) => prev || formatSlugToName(slug));
+          return;
+        }
+        if (data?.name) {
+          setStoreName(data.name);
+        } else {
+          setStoreName(formatSlugToName(slug));
+        }
+      } finally {
+        setLoadingStore(false);
+      }
+    };
+
+    fetchStoreName();
+  }, [slug]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -68,9 +107,19 @@ function Login() {
           className="w-full max-w-md"
         >
           <div className="bg-white rounded-lg shadow-xl p-8">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-orange-600 mb-2">Madalena Brigadeiros</h1>
-              <p className="text-gray-600">Sistema de Gestão de Pedidos</p>
+            <div className="text-center mb-8 flex flex-col items-center gap-2">
+              <img
+                src="https://horizons-cdn.hostinger.com/e36d36b8-0bd5-4763-9879-98322153d8ad/0e924da8366373d07b6cb40d5e5f3b9a.png"
+                alt="Madalena Brigadeiros"
+                className="h-16"
+              />
+              {slug ? (
+                <p className="text-base font-semibold text-gray-600">
+                  {loadingStore ? 'Carregando loja...' : storeName || formatSlugToName(slug)}
+                </p>
+              ) : (
+                <p className="text-base font-semibold text-gray-600">Painel Administrativo</p>
+              )}
             </div>
 
             {carregando ? (

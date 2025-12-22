@@ -61,8 +61,8 @@ function GestaoLogin() {
         >
           <div className="bg-white rounded-lg shadow-xl p-8">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-orange-600 mb-2">Gestao do Sistema</h1>
-              <p className="text-gray-600">Madalena Brigadeiros</p>
+              <h1 className="text-3xl font-bold text-orange-600 mb-2">Madalena Brigadeiros</h1>
+              <p className="text-gray-600">Painel Administrativo</p>
             </div>
 
             {carregando ? (

@@ -93,7 +93,17 @@ export const listarPerfis = async () => {
       data && data.length > 0
         ? data
         : [
-            { id: 'gerente', name: 'Gerente', permissions: { dashboard: '*', clientes: '*', produtos: '*', pedidos: '*', configuracoes: '*' } },
+            {
+              id: 'gerente',
+              name: 'Gerente',
+              permissions: {
+                dashboard: '*',
+                clientes: '*',
+                produtos: '*',
+                pedidos: '*',
+                configuracoes: '*',
+              },
+            },
             {
               id: 'atendente',
               name: 'Atendente',
@@ -116,7 +126,13 @@ export const listarPerfis = async () => {
       {
         id: 'gerente',
         nome: 'Gerente',
-        permissoes: { dashboard: '*', clientes: '*', produtos: '*', pedidos: '*', configuracoes: '*' },
+        permissoes: {
+          dashboard: '*',
+          clientes: '*',
+          produtos: '*',
+          pedidos: '*',
+          configuracoes: '*',
+        },
       },
       {
         id: 'atendente',
@@ -158,10 +174,7 @@ export const vincularUsuarioLoja = async ({ user_id, loja_id, perfil_id }) => {
   try {
     const { data, error } = await supabase
       .from('user_store_access')
-      .upsert(
-        { user_id, store_id: loja_id, role: perfil_id },
-        { onConflict: 'user_id,store_id' }
-      )
+      .upsert({ user_id, store_id: loja_id, role: perfil_id }, { onConflict: 'user_id,store_id' })
       .select()
       .single();
     if (error) throw error;

@@ -88,11 +88,6 @@ const imprimirPedido = (pedido, toast) => {
             <div><strong>Tipo:</strong> ${capitalizeFirstLetter(pedido.tipo_entrega)}</div>
             <div><strong>Data:</strong> ${dataEntregaFormatada}</div>
             <div><strong>Hora:</strong> ${horaEntregaFormatada}</div>
-            ${
-              criadoEmFormatado
-                ? `<div><strong>Criado em:</strong> ${criadoEmFormatado}</div>`
-                : ''
-            }
         </div>
         <div class="separator"></div>
     `;

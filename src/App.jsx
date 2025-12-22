@@ -20,19 +20,35 @@ import Layout from '@/shared/components/Layout';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Loader2 } from 'lucide-react';
 
+const LoadingScreen = () => (
+  <div className="flex h-screen w-full items-center justify-center bg-gray-100">
+    <div className="flex flex-col items-center gap-4">
+      <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      <p className="text-gray-600">Carregando...</p>
+    </div>
+  </div>
+);
+
+const getPrimeiraRotaPermitida = (slug, temPermissao) => {
+  if (!slug) return '/lojas';
+
+  const rotas = [
+    { modulo: 'dashboard', path: `/${slug}/dashboard` },
+    { modulo: 'pedidos', path: `/${slug}/pedidos` },
+    { modulo: 'clientes', path: `/${slug}/clientes` },
+    { modulo: 'produtos', path: `/${slug}/produtos` },
+  ];
+
+  const rotaPermitida = rotas.find((rota) => temPermissao(rota.modulo, 'visualizar'));
+  return rotaPermitida ? rotaPermitida.path : `/${slug}/login`;
+};
+
 function AdminGuard({ children }) {
   const { session, loading, isAdmin, signOut } = useAuth();
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-gray-100">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-          <p className="text-gray-600">Carregando...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (!session) {
@@ -80,18 +96,28 @@ function StoreGuard({ children }) {
   }, [loading, session, selecionarLojaPorSlug, slug, navigate, isAdmin, signOut]);
 
   if (loading || validando) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-gray-100">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-          <p className="text-gray-600">Carregando...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (slug && !lojaAtual) {
     return null;
+  }
+
+  return children;
+}
+
+function ProtectedRoute({ modulo, acao = 'visualizar', children }) {
+  const { loading, temPermissao } = useAuth();
+  const { slug } = useParams();
+  const location = useLocation();
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  if (!temPermissao(modulo, acao)) {
+    const fallback = getPrimeiraRotaPermitida(slug, temPermissao);
+    return <Navigate to={fallback} state={{ from: location }} replace />;
   }
 
   return children;
@@ -134,12 +160,54 @@ function App() {
         }
       >
         <Route index element={<Navigate to="login" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="clientes" element={<Clientes />} />
-        <Route path="clientes/:id" element={<ClienteDetalhe />} />
-        <Route path="produtos" element={<Produtos />} />
-        <Route path="pedidos" element={<Pedidos />} />
-        <Route path="configuracoes" element={<Configuracoes />}>
+        <Route
+          path="dashboard"
+          element={
+            <ProtectedRoute modulo="dashboard">
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="clientes"
+          element={
+            <ProtectedRoute modulo="clientes">
+              <Clientes />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="clientes/:id"
+          element={
+            <ProtectedRoute modulo="clientes">
+              <ClienteDetalhe />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="produtos"
+          element={
+            <ProtectedRoute modulo="produtos">
+              <Produtos />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="pedidos"
+          element={
+            <ProtectedRoute modulo="pedidos">
+              <Pedidos />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="configuracoes"
+          element={
+            <ProtectedRoute modulo="configuracoes">
+              <Configuracoes />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<Navigate to="categorias" replace />} />
           <Route path="categorias" element={<ConfigCategorias />} />
           <Route path="complementos" element={<ConfigComplementos />} />

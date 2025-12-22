@@ -31,7 +31,11 @@ import {
   deletarUsuario,
   criarUsuario,
 } from '@/features/configuracoes/services/configuracoesApi';
-import { listarLojas, listarUsuariosLojas, removerUsuarioLoja } from '@/features/gestao/services/gestaoApi';
+import {
+  listarLojas,
+  listarUsuariosLojas,
+  removerUsuarioLoja,
+} from '@/features/gestao/services/gestaoApi';
 import { Eye, EyeOff } from 'lucide-react';
 
 function GestaoUsuarios() {
@@ -271,11 +275,13 @@ function GestaoUsuarios() {
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     required={!usuarioSelecionado}
                     placeholder={usuarioSelecionado ? 'Deixe em branco para nao alterar' : ''}
+                    className="pr-12"
                   />
                   <button
                     type="button"
                     aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
-                    className="absolute inset-y-0 right-2 flex items-center text-gray-500"
+                    aria-pressed={mostrarSenha}
+                    className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"
                     onClick={() => setMostrarSenha((prev) => !prev)}
                   >
                     {mostrarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

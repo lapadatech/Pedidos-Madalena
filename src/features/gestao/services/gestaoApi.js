@@ -2,7 +2,10 @@ import { handleApiError, supabase } from '@/shared/lib/apiBase';
 
 export const listarLojas = async () => {
   try {
-    const { data, error } = await supabase.from('stores').select('id, name, slug, active').order('name');
+    const { data, error } = await supabase
+      .from('stores')
+      .select('id, name, slug, active')
+      .order('name');
     if (error) throw error;
     return (data || []).map((loja) => ({
       id: loja.id,
