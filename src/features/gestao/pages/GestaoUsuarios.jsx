@@ -81,6 +81,24 @@ function GestaoUsuarios() {
     carregarDados();
   }, [carregarDados]);
 
+  const perfisDisponiveis = useMemo(() => {
+    if (perfis?.length) return perfis;
+    // Fallback para evitar Select sem opcoes (Radix pode falhar se value nao existir).
+    return [
+      { id: 'gerente', nome: 'Gerente' },
+      { id: 'atendente', nome: 'Atendente' },
+    ];
+  }, [perfis]);
+
+  useEffect(() => {
+    if (!perfisDisponiveis.find((p) => p.id === formData.perfil_id)) {
+      setFormData((prev) => ({
+        ...prev,
+        perfil_id: perfisDisponiveis[0]?.id || 'atendente',
+      }));
+    }
+  }, [perfisDisponiveis, formData.perfil_id]);
+
   const lojasOptions = useMemo(
     () => lojas.map((loja) => ({ value: loja.id, label: `${loja.nome} (${loja.slug})` })),
     [lojas]
@@ -275,7 +293,7 @@ function GestaoUsuarios() {
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {perfis.map((perfil) => (
+                    {perfisDisponiveis.map((perfil) => (
                       <SelectItem key={perfil.id} value={perfil.id}>
                         {perfil.nome}
                       </SelectItem>
