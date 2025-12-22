@@ -60,6 +60,15 @@ const imprimirPedido = (pedido, toast) => {
   if (!pedido) return;
 
   const { cliente, itens, endereco_entrega } = pedido;
+
+  const criadoEmFormatado = pedido.created_at
+    ? (() => {
+        const d = new Date(pedido.created_at);
+        const dataStr = d.toLocaleDateString('pt-BR');
+        const horaStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        return `${dataStr} às ${horaStr}`;
+      })()
+    : null;
   const dataEntregaFormatada = new Date(pedido.data_entrega + 'T00:00:00').toLocaleDateString(
     'pt-BR'
   );
@@ -74,12 +83,16 @@ const imprimirPedido = (pedido, toast) => {
     `;
 
   const pedidoInfoHtml = `
-        <div class="separator"></div>
         <div class="section info-grid">
             <div><strong>Pedido:</strong> #${pedido.id}</div>
             <div><strong>Tipo:</strong> ${capitalizeFirstLetter(pedido.tipo_entrega)}</div>
             <div><strong>Data:</strong> ${dataEntregaFormatada}</div>
             <div><strong>Hora:</strong> ${horaEntregaFormatada}</div>
+            ${
+              criadoEmFormatado
+                ? `<div><strong>Criado em:</strong> ${criadoEmFormatado}</div>`
+                : ''
+            }
         </div>
         <div class="separator"></div>
     `;
@@ -117,6 +130,11 @@ const imprimirPedido = (pedido, toast) => {
   const criadoPorHtml = `
         <div class="section">
             <strong>Pedido realizado por:</strong> ${pedido.criado_por}
+            ${
+              criadoEmFormatado
+                ? `<div style="margin-top:4px;"><strong>Criado em:</strong> ${criadoEmFormatado}</div>`
+                : ''
+            }
         </div>
         <div class="separator"></div>
     `;
