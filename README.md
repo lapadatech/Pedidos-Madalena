@@ -1,6 +1,1 @@
 # Pedidos Madalena
-
-oi lindaooooooooodasdasdasdashdjashjkdashjksda
-
-lindoooooioooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
-krl sera q foi?
