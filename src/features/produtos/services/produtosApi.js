@@ -2,7 +2,10 @@ import { handleApiError, safeTerm, genericFetch, supabase } from '@/shared/lib/a
 
 export const listarCategorias = async () => {
   try {
-    const { data, error } = await supabase.from('categorias').select('id, nome');
+    const { data, error } = await supabase
+      .from('categorias')
+      .select('id, nome')
+      .order('nome', { ascending: true });
 
     if (error) throw error;
     return data;
@@ -51,7 +54,10 @@ export const deletarProduto = (id) => genericFetch('produtos', { method: 'delete
 
 export const listarGruposComplementos = async () => {
   try {
-    const { data, error } = await supabase.from('grupos_complementos').select('*');
+    const { data, error } = await supabase
+      .from('grupos_complementos')
+      .select('*')
+      .order('nome', { ascending: true });
 
     if (error) throw error;
     return data;
@@ -81,7 +87,10 @@ export const deletarGrupoComplemento = (id) =>
 
 export const listarGruposComplementosComOpcoes = async () => {
   try {
-    const { data, error } = await supabase.from('grupos_complementos').select('*');
+    const { data, error } = await supabase
+      .from('grupos_complementos')
+      .select('*')
+      .order('nome', { ascending: true });
 
     if (error) throw error;
 
@@ -90,12 +99,14 @@ export const listarGruposComplementosComOpcoes = async () => {
     return grupos.map((g) => {
       const opcoes = Array.isArray(g?.opcoes) ? g.opcoes : [];
 
-      const opcoesNormalizadas = opcoes.map((o, idx) => ({
-        id: o?.id ?? idx,
-        nome: typeof o?.nome === 'string' ? o.nome : String(o?.nome ?? ''),
-        preco_adicional: Number(o?.preco_adicional ?? 0),
-        grupo_id: g.id,
-      }));
+      const opcoesNormalizadas = opcoes
+        .map((o, idx) => ({
+          id: o?.id ?? idx,
+          nome: typeof o?.nome === 'string' ? o.nome : String(o?.nome ?? ''),
+          preco_adicional: Number(o?.preco_adicional ?? 0),
+          grupo_id: g.id,
+        }))
+        .sort((a, b) => a.nome.localeCompare(b.nome));
 
       return {
         ...g,

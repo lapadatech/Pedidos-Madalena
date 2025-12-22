@@ -1,20 +1,13 @@
 import React from 'react';
-import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import { Users, Shield, Tag, Plus, Tags } from 'lucide-react';
-import ConfigUsuarios from '@/features/configuracoes/components/ConfigUsuarios';
-import ConfigPerfis from '@/features/configuracoes/components/ConfigPerfis';
-import ConfigCategorias from '@/features/configuracoes/components/ConfigCategorias';
-import ConfigComplementos from '@/features/configuracoes/components/ConfigComplementos';
-import ConfigTags from '@/features/configuracoes/components/ConfigTags';
+import { Tag, Plus, Tags } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 function Configuracoes() {
   const { temPermissao } = useAuth();
 
   const menuItems = [
-    { path: 'usuarios', icon: Users, label: 'Usuários' },
-    { path: 'perfis', icon: Shield, label: 'Perfis' },
     { path: 'categorias', icon: Tag, label: 'Categorias' },
     { path: 'complementos', icon: Plus, label: 'Complementos' },
     { path: 'tags', icon: Tags, label: 'Tags' },
@@ -61,14 +54,7 @@ function Configuracoes() {
           </div>
 
           <div className="lg:col-span-3">
-            <Routes>
-              <Route path="usuarios" element={<ConfigUsuarios />} />
-              <Route path="perfis" element={<ConfigPerfis />} />
-              <Route path="categorias" element={<ConfigCategorias />} />
-              <Route path="complementos" element={<ConfigComplementos />} />
-              <Route path="tags" element={<ConfigTags />} />
-              <Route index element={<Navigate to="usuarios" replace />} />
-            </Routes>
+            <Outlet />
           </div>
         </div>
       </div>

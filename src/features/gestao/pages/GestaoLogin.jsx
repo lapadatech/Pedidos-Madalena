@@ -1,26 +1,28 @@
-import React, { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { useToast } from '@/shared/ui/use-toast';
 
-function Login() {
+function GestaoLogin() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [carregando, setCarregando] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
-  const { slug } = useParams();
 
-  const baseTitle = useMemo(
-    () => (slug ? `Login ${slug} - Gestor de Pedidos` : 'Login - Gestor de Pedidos'),
-    [slug]
-  );
+  useEffect(() => {
+    if (isAdmin) {
+      const destino = location.state?.from?.pathname || '/admin/lojas';
+      navigate(destino, { replace: true });
+    }
+  }, [isAdmin, location.state, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,14 +32,10 @@ function Login() {
     if (!error) {
       toast({
         title: 'Login realizado com sucesso!',
-        description: 'Bem-vindo ao sistema.',
+        description: 'Bem-vindo a gestao do sistema.',
         className: 'bg-white text-black font-bold',
       });
-      if (slug) {
-        navigate(`/${slug}/dashboard`);
-      } else {
-        navigate('/lojas');
-      }
+      navigate('/admin/lojas');
     } else {
       toast({
         title: 'Erro ao fazer login',
@@ -52,25 +50,19 @@ function Login() {
   return (
     <>
       <Helmet>
-        <title>{baseTitle}</title>
-        <meta name="description" content="Faça login no sistema de gestão de pedidos" />
+        <title>Login Admin - Gestor de Pedidos</title>
+        <meta name="description" content="Acesso do admin da plataforma" />
       </Helmet>
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 p-4">
         <motion.div
-          initial={{
-            opacity: 0,
-            y: 20,
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-md"
         >
           <div className="bg-white rounded-lg shadow-xl p-8">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-orange-600 mb-2">Madalena Brigadeiros</h1>
-              <p className="text-gray-600">Sistema de Gestão de Pedidos</p>
+              <h1 className="text-3xl font-bold text-orange-600 mb-2">Gestao do Sistema</h1>
+              <p className="text-gray-600">Madalena Brigadeiros</p>
             </div>
 
             {carregando ? (
@@ -116,16 +108,11 @@ function Login() {
                 </Button>
               </form>
             )}
-
-            <div className="mt-6 text-center text-sm text-gray-500">
-              <p />
-              <p />
-              <p />
-            </div>
           </div>
         </motion.div>
       </div>
     </>
   );
 }
-export default Login;
+
+export default GestaoLogin;

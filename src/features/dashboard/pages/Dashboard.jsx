@@ -15,6 +15,7 @@ import {
   Calendar as CalendarIcon,
 } from 'lucide-react';
 import { useToast } from '@/shared/ui/use-toast';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { listarPedidos, obterTotalPedidosGeral } from '@/features/pedidos/services/pedidosApi';
 import { contarRegistros } from '@/features/dashboard/services/dashboardApi';
 import { Button } from '@/shared/ui/button';
@@ -71,6 +72,8 @@ const getDateRange = (rangeType, customStart, customEnd) => {
 function Dashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { lojaAtual } = useAuth();
+  const basePath = lojaAtual?.slug ? `/${lojaAtual.slug}` : '';
 
   // Filtro de data
   const [dateFilter, setDateFilter] = useState('sempre'); // Padrão alterado para "Sempre"
@@ -176,13 +179,17 @@ function Dashboard() {
       const filtrosData = {};
       if (start) filtrosData.data_entrega_gte = start;
       if (end) filtrosData.data_entrega_lte = end;
+      if (lojaAtual?.id) filtrosData.store_id = lojaAtual.id;
+
+      const filtrosClientes = [];
+      const filtrosProdutos = [{ column: 'ativo', operator: 'eq', value: true }];
 
       const [totalPedidosGeral, totalClientes, totalProdutosAtivos, pedidosGeraisResult] =
         await Promise.all([
           obterTotalPedidosGeral(filtrosData),
-          contarRegistros('clientes'), // Clientes sempre total geral
-          contarRegistros('produtos', [{ column: 'ativo', operator: 'eq', value: true }]), // Produtos sempre total geral
-          listarPedidos(filtrosData), // Fetch all orders in range to filter locally for correctness
+          contarRegistros('clientes', filtrosClientes),
+          contarRegistros('produtos', filtrosProdutos),
+          listarPedidos(filtrosData),
         ]);
 
       const todosPedidosNoPeriodo = pedidosGeraisResult?.data || [];
@@ -353,7 +360,7 @@ function Dashboard() {
       setStats((prevStats) => prevStats.map((s) => ({ ...s, ...errorState })));
       setLoadingClientes(false);
     }
-  }, [toast, dateFilter, customStartDate, customEndDate]);
+  }, [toast, dateFilter, customStartDate, customEndDate, lojaAtual]);
 
   useEffect(() => {
     carregarDados();
@@ -363,26 +370,32 @@ function Dashboard() {
     // Ao clicar, podemos passar os filtros de data também se desejar, mas por enquanto mantemos a lógica original
     // Adicionamos a lógica básica de navegação
     if (cardId === 'naoPagos') {
-      navigate('/pedidos', { state: { filtroPagamento: 'Não Pago', filtroStatus: 'abertos' } });
+      navigate(`${basePath}/pedidos`, {
+        state: { filtroPagamento: 'Não Pago', filtroStatus: 'abertos' },
+      });
     } else if (cardId === 'naoEntregues') {
-      navigate('/pedidos', { state: { filtroEntrega: 'Não Entregue', filtroStatus: 'abertos' } });
+      navigate(`${basePath}/pedidos`, {
+        state: { filtroEntrega: 'Não Entregue', filtroStatus: 'abertos' },
+      });
     } else if (cardId === 'pagosNaoEntregues') {
-      navigate('/pedidos', {
+      navigate(`${basePath}/pedidos`, {
         state: { filtroPagamento: 'Pago', filtroEntrega: 'Não Entregue', filtroStatus: 'abertos' },
       });
     } else if (cardId === 'entreguesNaoPagos') {
-      navigate('/pedidos', {
+      navigate(`${basePath}/pedidos`, {
         state: { filtroPagamento: 'Não Pago', filtroEntrega: 'Entregue', filtroStatus: 'abertos' },
       });
     } else if (cardId === 'atrasados') {
-      navigate('/pedidos', { state: { filtroStatus: 'abertos' } });
+      navigate(`${basePath}/pedidos`, { state: { filtroStatus: 'abertos' } });
     } else if (cardId === 'totalPedidos') {
-      navigate('/pedidos');
+      navigate(`${basePath}/pedidos`);
     }
   };
 
   const handleVerTodosPendentes = () => {
-    navigate('/pedidos', { state: { filtroPagamento: 'Não Pago', filtroEntrega: 'Entregue' } });
+    navigate(`${basePath}/pedidos`, {
+      state: { filtroPagamento: 'Não Pago', filtroEntrega: 'Entregue' },
+    });
   };
 
   const handleApplyCustomDate = () => {

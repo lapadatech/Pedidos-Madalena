@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { LogOut, Key } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/shared/ui/button';
@@ -12,22 +12,14 @@ import {
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import AlterarSenhaDialog from '@/shared/components/AlterarSenhaDialog';
 
-function Header() {
-  const { usuario, signOut, lojaAtual, perfilAtual, lojas, isAdmin } = useAuth();
+function GestaoHeader() {
+  const { usuario, signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const { slug } = useParams();
   const [dialogSenhaAberto, setDialogSenhaAberto] = useState(false);
-  const podeAcessarGestao =
-    isAdmin ||
-    (usuario?.lojas || []).some((loja) => loja?.perfil?.nome?.toLowerCase() === 'gerente');
 
   const handleLogout = async () => {
     await signOut();
-    if (slug) {
-      navigate(`/${slug}/login`);
-    } else {
-      navigate('/admin/login');
-    }
+    navigate('/admin/login');
   };
 
   const iniciais =
@@ -43,14 +35,14 @@ function Header() {
       <header className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Gestor de Pedidos</h1>
-            <p className="text-sm text-gray-500">{lojaAtual?.nome || ''}</p>
+            <h1 className="text-2xl font-bold text-gray-900">Gestao do Sistema</h1>
+            <p className="text-sm text-gray-500">Lojas e usuarios por loja</p>
           </div>
 
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="text-sm font-medium text-gray-900">{usuario?.nome}</p>
-              <p className="text-xs text-gray-500">{perfilAtual?.nome}</p>
+              <p className="text-xs text-gray-500">{isAdmin ? 'Admin' : 'Gerente'}</p>
             </div>
 
             <DropdownMenu>
@@ -62,16 +54,6 @@ function Header() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                {podeAcessarGestao && (
-                  <DropdownMenuItem onClick={() => navigate('/admin/lojas')}>
-                    Admin
-                  </DropdownMenuItem>
-                )}
-                {Array.isArray(lojas) && lojas.length > 1 && (
-                  <DropdownMenuItem onClick={() => navigate('/lojas')}>
-                    Trocar Loja
-                  </DropdownMenuItem>
-                )}
                 <DropdownMenuItem onClick={() => setDialogSenhaAberto(true)}>
                   <Key className="mr-2 h-4 w-4" />
                   Trocar Senha
@@ -90,4 +72,4 @@ function Header() {
   );
 }
 
-export default Header;
+export default GestaoHeader;

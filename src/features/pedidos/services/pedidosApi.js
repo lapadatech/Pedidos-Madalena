@@ -21,6 +21,8 @@ export const listarPedidos = async (filtros = {}) => {
       { count: 'exact' }
     );
 
+    if (filtros.store_id) query = query.eq('store_id', filtros.store_id);
+
     if (isNumber && term.length > 0) {
       query = query.eq('id', Number(term));
     }
@@ -109,6 +111,8 @@ export const obterTotalPedidosGeral = async (filtros = {}) => {
   try {
     let query = supabase.from('pedidos').select('total', { count: 'exact' });
 
+    if (filtros.store_id) query = query.eq('store_id', filtros.store_id);
+
     if (filtros.data_entrega_gte) query = query.gte('data_entrega', filtros.data_entrega_gte);
 
     if (filtros.data_entrega_lte) query = query.lte('data_entrega', filtros.data_entrega_lte);
@@ -168,6 +172,7 @@ export const criarPedido = async (pedidoData) => {
       .insert({
         ...pedido,
         cliente_id: cliente.id,
+        store_id: pedido.store_id,
       })
       .select()
       .single();
@@ -263,16 +268,20 @@ export const deletarPedido = async (id) => {
   }
 };
 
-export const listarResumoPedidosPorClientes = async (clienteIds = []) => {
+export const listarResumoPedidosPorClientes = async (clienteIds = [], lojaId) => {
   if (!Array.isArray(clienteIds) || clienteIds.length === 0) {
     return {};
   }
 
   try {
-    const { data: pedidosData, error } = await supabase
+    let query = supabase
       .from('pedidos')
       .select('id, cliente_id, total, status_pagamento, status_entrega')
       .in('cliente_id', clienteIds);
+
+    if (lojaId) query = query.eq('store_id', lojaId);
+
+    const { data: pedidosData, error } = await query;
 
     if (error) throw error;
 

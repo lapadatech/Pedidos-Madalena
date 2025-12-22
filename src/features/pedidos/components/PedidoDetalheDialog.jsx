@@ -30,6 +30,14 @@ const formatarHora = (hora) => {
   return hora.slice(0, 5);
 };
 
+const formatarDataHora = (data) => {
+  if (!data) return '';
+  const dt = new Date(data);
+  const dataStr = dt.toLocaleDateString('pt-BR');
+  const horaStr = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return `${dataStr} às ${horaStr}`;
+};
+
 const capitalizeFirstLetter = (string) => {
   if (!string) return '';
   return string.charAt(0).toUpperCase() + string.slice(1);
@@ -668,7 +676,14 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
       >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Detalhes do Pedido #{pedidoId}</DialogTitle>
+            <DialogTitle>
+              Detalhes do Pedido #{pedidoId}
+              {pedido?.created_at && (
+                <span className="block text-sm font-normal text-gray-500">
+                  Criado em {formatarDataHora(pedido.created_at)}
+                </span>
+              )}
+            </DialogTitle>
           </DialogHeader>
           {renderContent()}
         </DialogContent>

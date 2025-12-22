@@ -4,22 +4,63 @@ import { useToast } from '@/shared/ui/use-toast';
 
 const AuthContext = createContext(undefined);
 
+const ROLE_PERMISSIONS = {
+  gerente: {
+    pedidos: '*',
+    clientes: '*',
+    produtos: '*',
+    configuracoes: '*',
+  },
+  atendente: {
+    pedidos: '*',
+    clientes: { visualizar: true, editar: true },
+    produtos: { visualizar: true },
+  },
+  admin: {
+    pedidos: '*',
+    clientes: '*',
+    produtos: '*',
+    configuracoes: '*',
+  },
+};
+
+const buildPerfil = (role) => {
+  if (!role) return { nome: 'Atendente', permissoes: ROLE_PERMISSIONS.atendente };
+  const normalized = role.toLowerCase();
+  if (normalized === 'administrador' || normalized === 'admin') {
+    return { nome: 'Admin', permissoes: ROLE_PERMISSIONS.admin };
+  }
+  if (ROLE_PERMISSIONS[normalized]) {
+    const nome = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+    return { nome, permissoes: ROLE_PERMISSIONS[normalized] };
+  }
+  return { nome: role, permissoes: ROLE_PERMISSIONS.atendente };
+};
+
 export const SupabaseAuthProvider = ({ children }) => {
   const { toast } = useToast();
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
   const [usuario, setUsuario] = useState(null); // Custom user profile from DB
+  const [lojas, setLojas] = useState([]);
+  const [lojaAtual, setLojaAtual] = useState(null);
+  const [perfilAtual, setPerfilAtual] = useState(null);
+  const [permissoes, setPermissoes] = useState({});
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const clearSession = useCallback(() => {
     setUser(null);
     setUsuario(null);
     setSession(null);
+    setLojas([]);
+    setLojaAtual(null);
+    setPerfilAtual(null);
+    setPermissoes({});
+    setIsAdmin(false);
     setLoading(false);
-    // No need to call signOut here, as this is usually a reaction to an auth error
   }, []);
 
-  // Handle initializing user data from session
   const initializeUser = useCallback(
     async (currentSession) => {
       try {
@@ -27,11 +68,12 @@ export const SupabaseAuthProvider = ({ children }) => {
         if (currentSession?.user) {
           setSession(currentSession);
           setUser(currentSession.user);
-          const userProfile = await authService.getUserProfile(currentSession.user.id);
-          if (userProfile) {
-            setUsuario(userProfile);
+          const profile = await authService.getUserProfile(currentSession.user.id);
+          if (profile) {
+            setUsuario(profile);
+            setLojas(profile.lojas || []);
+            setIsAdmin(!!profile.is_admin);
           } else {
-            // Profile doesn't exist, session might be stale or user deleted
             throw new Error('User profile not found.');
           }
         } else {
@@ -39,8 +81,7 @@ export const SupabaseAuthProvider = ({ children }) => {
         }
       } catch (error) {
         console.error('Error initializing user:', error);
-        // This catch block handles errors like "Invalid Refresh Token"
-        await authService.signOut().catch(console.error); // Attempt to sign out cleanly
+        await authService.signOut().catch(console.error);
         clearSession();
       } finally {
         setLoading(false);
@@ -84,7 +125,6 @@ export const SupabaseAuthProvider = ({ children }) => {
           description: error.message,
         });
       }
-      // Auth state change will trigger user initialization
       return { data, error };
     },
     [toast]
@@ -104,13 +144,46 @@ export const SupabaseAuthProvider = ({ children }) => {
     return { error };
   }, [toast, clearSession]);
 
+  const selecionarLojaPorSlug = useCallback(
+    (slug) => {
+      if (!slug || !Array.isArray(lojas) || lojas.length === 0) {
+        setLojaAtual(null);
+        setPerfilAtual(null);
+        setPermissoes({});
+        return false;
+      }
+
+      if (isAdmin) {
+        setLojaAtual(null);
+        setPerfilAtual(null);
+        setPermissoes({});
+        return false;
+      }
+
+      const lojaEncontrada = lojas.find((loja) => loja.slug === slug);
+      if (!lojaEncontrada) {
+        setLojaAtual(null);
+        setPerfilAtual(null);
+        setPermissoes({});
+        return false;
+      }
+
+      const perfil = lojaEncontrada.perfil || buildPerfil(lojaEncontrada.role);
+
+      setLojaAtual(lojaEncontrada);
+      setPerfilAtual(perfil);
+      setPermissoes(perfil?.permissoes || {});
+      return true;
+    },
+    [lojas, isAdmin]
+  );
+
   const temPermissao = useCallback(
     (modulo, acao) => {
       if (loading || !usuario) return false;
 
-      if (usuario.email === 'admin@madalena.com') return true;
+      if (isAdmin) return true;
 
-      const permissoes = usuario.permissoes;
       if (!permissoes || !permissoes[modulo]) return false;
 
       const permissoesModulo = permissoes[modulo];
@@ -132,20 +205,44 @@ export const SupabaseAuthProvider = ({ children }) => {
 
       return permissoesModulo === '*' || permissoesModulo === acao;
     },
-    [usuario, loading]
+    [usuario, loading, permissoes, isAdmin]
   );
+
+  const podeAcessarGestao = useMemo(() => {
+    return isAdmin;
+  }, [isAdmin]);
 
   const value = useMemo(
     () => ({
       user,
       session,
       usuario,
+      lojas,
+      lojaAtual,
+      perfilAtual,
+      isAdmin,
       loading,
       temPermissao,
+      podeAcessarGestao,
       signIn,
       signOut,
+      selecionarLojaPorSlug,
     }),
-    [user, session, usuario, loading, temPermissao, signIn, signOut]
+    [
+      user,
+      session,
+      usuario,
+      lojas,
+      lojaAtual,
+      perfilAtual,
+      isAdmin,
+      loading,
+      temPermissao,
+      podeAcessarGestao,
+      signIn,
+      signOut,
+      selecionarLojaPorSlug,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

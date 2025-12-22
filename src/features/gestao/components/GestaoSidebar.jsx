@@ -1,51 +1,15 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import {
-  LayoutDashboard,
-  Users,
-  Package,
-  ShoppingCart,
-  Settings,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-} from 'lucide-react';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { Users, ChevronLeft, ChevronRight, Loader2, Store, Shield } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 
-function Sidebar({ collapsed, setCollapsed }) {
-  const { temPermissao, loading, lojaAtual } = useAuth();
-  const location = useLocation();
-  const slugFromPath = location.pathname.split('/')[1] || '';
-  const baseSlug = lojaAtual?.slug || slugFromPath;
-  const basePath = baseSlug ? `/${baseSlug}` : '';
-
+function GestaoSidebar({ collapsed, setCollapsed, loading }) {
   const menuItems = [
-    {
-      path: `${basePath}/dashboard`,
-      icon: LayoutDashboard,
-      label: 'Dashboard',
-      modulo: 'dashboard',
-    },
-    { path: `${basePath}/pedidos`, icon: ShoppingCart, label: 'Pedidos', modulo: 'pedidos' },
-    { path: `${basePath}/clientes`, icon: Users, label: 'Clientes', modulo: 'clientes' },
-    { path: `${basePath}/produtos`, icon: Package, label: 'Produtos', modulo: 'produtos' },
-    {
-      path: `${basePath}/configuracoes`,
-      icon: Settings,
-      label: 'Configuracoes',
-      modulo: 'configuracoes',
-    },
+    { path: '/admin/lojas', icon: Store, label: 'Lojas' },
+    { path: '/admin/usuarios', icon: Users, label: 'Usuarios' },
+    { path: '/admin/perfis', icon: Shield, label: 'Perfis' },
   ];
-
-  // Only filter items if not loading. If loading, we might want to show nothing or skeletons.
-  // Here we hide until loaded to prevent flashing.
-  const visibleItems = loading
-    ? []
-    : menuItems.filter((item) => {
-        return temPermissao(item.modulo, 'visualizar');
-      });
 
   return (
     <motion.aside
@@ -61,9 +25,7 @@ function Sidebar({ collapsed, setCollapsed }) {
               alt="Madalena Brigadeiros Logo"
               className="h-20"
             />
-            <span className="font-semibold text-sm text-gray-600 mt-1">
-              {lojaAtual?.nome || ''}
-            </span>
+            <span className="font-semibold text-sm text-gray-600 mt-1">Gestao do Sistema</span>
           </div>
         )}
         <Button
@@ -82,8 +44,8 @@ function Sidebar({ collapsed, setCollapsed }) {
             <Loader2 className="h-6 w-6 animate-spin mb-2" />
             {!collapsed && <span className="text-xs">Carregando menu...</span>}
           </div>
-        ) : visibleItems.length > 0 ? (
-          visibleItems.map((item) => (
+        ) : (
+          menuItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -102,14 +64,10 @@ function Sidebar({ collapsed, setCollapsed }) {
               )}
             </NavLink>
           ))
-        ) : (
-          <div className="px-4 py-10 text-center text-gray-400 text-sm">
-            {!collapsed && <p>Nenhum menu disponivel para seu perfil.</p>}
-          </div>
         )}
       </nav>
     </motion.aside>
   );
 }
 
-export default Sidebar;
+export default GestaoSidebar;

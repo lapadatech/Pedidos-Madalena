@@ -9,6 +9,7 @@ import TagChip from '@/shared/components/tags/TagChip';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { useToast } from '@/shared/ui/use-toast';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 const maskCelular = (value) => {
   if (!value) return '';
@@ -42,6 +43,8 @@ function ClienteDetalhe() {
   const [pedidoSelecionadoId, setPedidoSelecionadoId] = useState(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { lojaAtual } = useAuth();
+  const basePath = lojaAtual?.slug ? `/${lojaAtual.slug}` : '';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,7 +53,7 @@ function ClienteDetalhe() {
         const [clienteData, enderecosData, pedidosData] = await Promise.all([
           obterCliente(id),
           listarEnderecos(id),
-          listarPedidos({ cliente_id: id }),
+          listarPedidos({ cliente_id: id, store_id: lojaAtual?.id }),
         ]);
         setCliente(clienteData);
         setEnderecos(enderecosData);
@@ -66,7 +69,7 @@ function ClienteDetalhe() {
       }
     };
     fetchData();
-  }, [id, toast]);
+  }, [id, toast, lojaAtual]);
 
   if (loading) {
     return (
@@ -81,7 +84,7 @@ function ClienteDetalhe() {
       <div className="text-center">
         <p>Cliente nao encontrado.</p>
         <Button asChild variant="link" className="text-orange-500">
-          <Link to="/clientes">Voltar para a lista</Link>
+          <Link to={`${basePath}/clientes`}>Voltar para a lista</Link>
         </Button>
       </div>
     );
@@ -98,7 +101,7 @@ function ClienteDetalhe() {
       <div className="space-y-6">
         <div>
           <Button asChild variant="ghost" className="mb-4">
-            <Link to="/clientes">
+            <Link to={`${basePath}/clientes`}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Clientes
             </Link>
           </Button>

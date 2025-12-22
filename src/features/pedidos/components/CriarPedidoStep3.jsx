@@ -16,7 +16,7 @@ import { vincularTagsPedido } from '@/features/tags/services/tagsApi';
 import TagSelector from '@/shared/components/tags/TagSelector';
 
 function CriarPedidoStep3({ onVoltar, onFinalizar, dadosIniciais, editMode }) {
-  const { usuario } = useAuth();
+  const { usuario, lojaAtual } = useAuth();
   const { toast } = useToast();
 
   // Estados para a seção de produtos
@@ -184,8 +184,13 @@ function CriarPedidoStep3({ onVoltar, onFinalizar, dadosIniciais, editMode }) {
 
     setIsSaving(true);
     try {
+      if (!lojaAtual?.id) {
+        throw new Error('Loja atual nao encontrada.');
+      }
+
       const pedidoParaSalvar = {
         ...dadosIniciais,
+        store_id: lojaAtual.id,
         subtotal,
         desconto: descontoFloat,
         frete: freteFloat,

@@ -33,6 +33,27 @@ const acoesPermissao = [
   { id: 'gerenciar', nome: 'Gerenciar' }, // Gerenciar inclui 'excluir'
 ];
 
+const normalizePermissoes = (raw = {}) => {
+  const result = {};
+  modulosPermissao.forEach((modulo) => {
+    const value = raw?.[modulo.id];
+    if (value === '*') {
+      result[modulo.id] = { visualizar: true, editar: true, gerenciar: true };
+    } else if (value && typeof value === 'object') {
+      result[modulo.id] = {
+        visualizar: !!value.visualizar || !!value.editar || !!value.gerenciar,
+        editar: !!value.editar || !!value.gerenciar,
+        gerenciar: !!value.gerenciar,
+      };
+    } else {
+      result[modulo.id] = { visualizar: false, editar: false, gerenciar: false };
+    }
+  });
+  return result;
+};
+
+const permissoesVazias = normalizePermissoes();
+
 function ConfigPerfis() {
   const [perfis, setPerfis] = useState([]);
   const [dialogAberto, setDialogAberto] = useState(false);
@@ -40,14 +61,18 @@ function ConfigPerfis() {
   const [carregando, setCarregando] = useState(false);
   const [formData, setFormData] = useState({
     nome: '',
-    permissoes: {},
+    permissoes: permissoesVazias,
   });
   const { toast } = useToast();
 
   const carregarPerfis = useCallback(async () => {
     try {
       const data = await listarPerfis();
-      setPerfis(data);
+      const normalizados = (data || []).map((p) => ({
+        ...p,
+        permissoes: normalizePermissoes(p.permissoes),
+      }));
+      setPerfis(normalizados);
     } catch (error) {
       toast({
         title: 'Erro ao carregar perfis',
@@ -65,27 +90,23 @@ function ConfigPerfis() {
     setFormData((prev) => {
       const newPermissoes = { ...prev.permissoes };
       if (!newPermissoes[modulo]) {
-        newPermissoes[modulo] = {};
+        newPermissoes[modulo] = { visualizar: false, editar: false, gerenciar: false };
       }
-      newPermissoes[modulo][acao] = checked;
+      newPermissoes[modulo][acao] = !!checked;
 
-      // Se 'gerenciar' for marcado, marcar 'editar' e 'visualizar'
       if (acao === 'gerenciar' && checked) {
-        newPermissoes[modulo]['editar'] = true;
-        newPermissoes[modulo]['visualizar'] = true;
+        newPermissoes[modulo].editar = true;
+        newPermissoes[modulo].visualizar = true;
       }
-      // Se 'editar' for marcado, marcar 'visualizar'
       if (acao === 'editar' && checked) {
-        newPermissoes[modulo]['visualizar'] = true;
+        newPermissoes[modulo].visualizar = true;
       }
-      // Se 'visualizar' for desmarcado, desmarcar 'editar' e 'gerenciar'
       if (acao === 'visualizar' && !checked) {
-        newPermissoes[modulo]['editar'] = false;
-        newPermissoes[modulo]['gerenciar'] = false;
+        newPermissoes[modulo].editar = false;
+        newPermissoes[modulo].gerenciar = false;
       }
-      // Se 'editar' for desmarcado, desmarcar 'gerenciar'
       if (acao === 'editar' && !checked) {
-        newPermissoes[modulo]['gerenciar'] = false;
+        newPermissoes[modulo].gerenciar = false;
       }
 
       return { ...prev, permissoes: newPermissoes };
@@ -117,7 +138,7 @@ function ConfigPerfis() {
     setPerfilSelecionado(perfil);
     setFormData({
       nome: perfil.nome,
-      permissoes: perfil.permissoes || {},
+      permissoes: normalizePermissoes(perfil.permissoes),
     });
     setDialogAberto(true);
   };
@@ -139,7 +160,7 @@ function ConfigPerfis() {
   };
 
   const resetForm = () => {
-    setFormData({ nome: '', permissoes: {} });
+    setFormData({ nome: '', permissoes: permissoesVazias });
     setPerfilSelecionado(null);
   };
 
@@ -169,7 +190,12 @@ function ConfigPerfis() {
           }}
         >
           <DialogTrigger asChild>
-            <Button size="sm" className="bg-orange-500 hover:bg-orange-600">
+            <Button
+              size="sm"
+              className="bg-orange-500 hover:bg-orange-600"
+              disabled
+              title="Criação de novos perfis não suportada; use atendente/gerente."
+            >
               <Plus className="h-4 w-4 mr-2" />
               Novo Perfil
             </Button>

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import Login from '@/features/auth/pages/Login';
 import Dashboard from '@/features/dashboard/pages/Dashboard';
 import Clientes from '@/features/clientes/pages/Clientes';
@@ -7,12 +7,21 @@ import ClienteDetalhe from '@/features/clientes/pages/ClienteDetalhe';
 import Produtos from '@/features/produtos/pages/Produtos';
 import Pedidos from '@/features/pedidos/pages/Pedidos';
 import Configuracoes from '@/features/configuracoes/pages/Configuracoes';
+import ConfigCategorias from '@/features/configuracoes/components/ConfigCategorias';
+import ConfigComplementos from '@/features/configuracoes/components/ConfigComplementos';
+import ConfigTags from '@/features/configuracoes/components/ConfigTags';
+import GestaoLayout from '@/features/gestao/pages/GestaoLayout';
+import GestaoLogin from '@/features/gestao/pages/GestaoLogin';
+import GestaoLojas from '@/features/gestao/pages/GestaoLojas';
+import GestaoUsuarios from '@/features/gestao/pages/GestaoUsuarios';
+import GestaoPerfis from '@/features/gestao/pages/GestaoPerfis';
+import SelecionarLoja from '@/features/lojas/pages/SelecionarLoja';
 import Layout from '@/shared/components/Layout';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Loader2 } from 'lucide-react';
 
-function PrivateRoute({ children }) {
-  const { session, loading } = useAuth();
+function AdminGuard({ children }) {
+  const { session, loading, isAdmin, signOut } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -27,7 +36,62 @@ function PrivateRoute({ children }) {
   }
 
   if (!session) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/admin/login" state={{ from: location }} replace />;
+  }
+
+  if (!isAdmin) {
+    signOut();
+    return <Navigate to="/admin/login" replace />;
+  }
+
+  return children;
+}
+
+function StoreGuard({ children }) {
+  const { loading, session, selecionarLojaPorSlug, lojaAtual, isAdmin, signOut } = useAuth();
+  const { slug } = useParams();
+  const navigate = useNavigate();
+  const [validando, setValidando] = useState(true);
+
+  useEffect(() => {
+    if (loading) return;
+    if (isAdmin) {
+      signOut();
+      navigate('/admin/login', { replace: true });
+      return;
+    }
+    if (!session) {
+      if (slug) {
+        navigate(`/${slug}/login`, { replace: true });
+      } else {
+        navigate('/admin/login', { replace: true });
+      }
+      return;
+    }
+
+    if (slug) {
+      const ok = selecionarLojaPorSlug(slug);
+      if (!ok) {
+        navigate('/lojas', { replace: true });
+        return;
+      }
+    }
+    setValidando(false);
+  }, [loading, session, selecionarLojaPorSlug, slug, navigate, isAdmin, signOut]);
+
+  if (loading || validando) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-gray-100">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (slug && !lojaAtual) {
+    return null;
   }
 
   return children;
@@ -36,22 +100,51 @@ function PrivateRoute({ children }) {
 function App() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
+      <Route path="/" element={<Navigate to="/admin/login" replace />} />
+      <Route path="/admin/login" element={<GestaoLogin />} />
       <Route
-        path="/"
+        path="/admin"
         element={
-          <PrivateRoute>
-            <Layout />
-          </PrivateRoute>
+          <AdminGuard>
+            <GestaoLayout />
+          </AdminGuard>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route index element={<Navigate to="lojas" replace />} />
+        <Route path="lojas" element={<GestaoLojas />} />
+        <Route path="usuarios" element={<GestaoUsuarios />} />
+        <Route path="perfis" element={<GestaoPerfis />} />
+      </Route>
+
+      <Route path="/:slug/login" element={<Login />} />
+      <Route
+        path="/lojas"
+        element={
+          <StoreGuard>
+            <SelecionarLoja />
+          </StoreGuard>
+        }
+      />
+      <Route
+        path="/:slug"
+        element={
+          <StoreGuard>
+            <Layout />
+          </StoreGuard>
+        }
+      >
+        <Route index element={<Navigate to="login" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="clientes" element={<Clientes />} />
         <Route path="clientes/:id" element={<ClienteDetalhe />} />
         <Route path="produtos" element={<Produtos />} />
         <Route path="pedidos" element={<Pedidos />} />
-        <Route path="configuracoes/*" element={<Configuracoes />} />
+        <Route path="configuracoes" element={<Configuracoes />}>
+          <Route index element={<Navigate to="categorias" replace />} />
+          <Route path="categorias" element={<ConfigCategorias />} />
+          <Route path="complementos" element={<ConfigComplementos />} />
+          <Route path="tags" element={<ConfigTags />} />
+        </Route>
       </Route>
     </Routes>
   );

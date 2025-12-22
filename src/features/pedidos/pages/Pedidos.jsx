@@ -61,7 +61,7 @@ function Pedidos() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPedidos, setTotalPedidos] = useState(0);
 
-  const { temPermissao } = useAuth();
+  const { temPermissao, lojaAtual } = useAuth();
   const { toast } = useToast();
 
   const carregarPedidos = useCallback(async () => {
@@ -72,6 +72,7 @@ function Pedidos() {
         filters = {
           busca,
           status_geral: filtroStatus,
+          store_id: lojaAtual?.id,
           status_pagamento: filtroPagamento !== 'todos' ? filtroPagamento : undefined,
           status_entrega: filtroEntrega !== 'todos' ? filtroEntrega : undefined,
           tag_ids: filtroTagIds.length > 0 ? filtroTagIds : undefined,
@@ -81,6 +82,7 @@ function Pedidos() {
       } else {
         filters = {
           status_geral: 'abertos',
+          store_id: lojaAtual?.id,
         };
       }
 
@@ -109,6 +111,7 @@ function Pedidos() {
     filtroEntrega,
     filtroTagIds,
     currentPage,
+    lojaAtual,
     toast,
   ]);
 
@@ -190,6 +193,7 @@ function Pedidos() {
       const { data: allPedidos } = await listarPedidos({
         busca,
         status_geral: filtroStatus,
+        store_id: lojaAtual?.id,
         status_pagamento: filtroPagamento !== 'todos' ? filtroPagamento : undefined,
         status_entrega: filtroEntrega !== 'todos' ? filtroEntrega : undefined,
         tag_ids: filtroTagIds.length > 0 ? filtroTagIds : undefined,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -22,41 +22,50 @@ import {
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Checkbox } from '@/shared/ui/checkbox';
 import { useToast } from '@/shared/ui/use-toast';
 import {
   listarUsuarios,
-  criarUsuario,
-  atualizarUsuario,
-  deletarUsuario,
   listarPerfis,
   vincularUsuarioLoja,
+  deletarUsuario,
+  criarUsuario,
 } from '@/features/configuracoes/services/configuracoesApi';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { listarLojas, listarUsuariosLojas, removerUsuarioLoja } from '@/features/gestao/services/gestaoApi';
+import { Eye, EyeOff } from 'lucide-react';
 
-function ConfigUsuarios() {
+function GestaoUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
   const [perfis, setPerfis] = useState([]);
+  const [lojas, setLojas] = useState([]);
+  const [vinculos, setVinculos] = useState([]);
   const [dialogAberto, setDialogAberto] = useState(false);
   const [alertAberto, setAlertAberto] = useState(false);
   const [usuarioSelecionado, setUsuarioSelecionado] = useState(null);
   const [carregando, setCarregando] = useState(false);
+  const [lojasSelecionadas, setLojasSelecionadas] = useState([]);
+  const [mostrarSenha, setMostrarSenha] = useState(false);
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
     password: '',
-    perfil_id: '',
+    perfil_id: 'atendente',
   });
   const { toast } = useToast();
-  const { user, perfilAtual, lojaAtual } = useAuth();
-
-  const podeExcluir = perfilAtual?.nome === 'Gerente';
 
   const carregarDados = useCallback(async () => {
     setCarregando(true);
     try {
-      const [usuariosData, perfisData] = await Promise.all([listarUsuarios(), listarPerfis()]);
-      setUsuarios(usuariosData);
-      setPerfis(perfisData);
+      const [usuariosData, perfisData, lojasData, vinculosData] = await Promise.all([
+        listarUsuarios(),
+        listarPerfis(),
+        listarLojas(),
+        listarUsuariosLojas(),
+      ]);
+      setUsuarios(usuariosData || []);
+      setPerfis(perfisData || []);
+      setLojas(lojasData || []);
+      setVinculos(vinculosData || []);
     } catch (error) {
       toast({
         title: 'Erro ao carregar dados',
@@ -72,41 +81,64 @@ function ConfigUsuarios() {
     carregarDados();
   }, [carregarDados]);
 
+  const lojasOptions = useMemo(
+    () => lojas.map((loja) => ({ value: loja.id, label: `${loja.nome} (${loja.slug})` })),
+    [lojas]
+  );
+
+  const vinculosPorUsuario = useMemo(() => {
+    const map = new Map();
+    vinculos.forEach((v) => {
+      if (!map.has(v.user_id)) map.set(v.user_id, []);
+      map.get(v.user_id).push(v);
+    });
+    return map;
+  }, [vinculos]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.perfil_id) {
+      toast({ title: 'Selecione um perfil', variant: 'destructive' });
+      return;
+    }
+    if (lojasSelecionadas.length === 0) {
+      toast({ title: 'Selecione pelo menos uma loja', variant: 'destructive' });
+      return;
+    }
     setCarregando(true);
 
     try {
-      if (usuarioSelecionado) {
-        const dadosAtualizacao = { nome: formData.nome, perfil_id: formData.perfil_id };
-        if (formData.password) {
-          dadosAtualizacao.password = formData.password;
-        }
-        await atualizarUsuario(usuarioSelecionado.id, dadosAtualizacao);
-        if (lojaAtual?.id) {
-          await vincularUsuarioLoja({
-            user_id: usuarioSelecionado.id,
-            loja_id: lojaAtual.id,
-            perfil_id: formData.perfil_id,
-          });
-        }
-        toast({ title: 'Usuário atualizado!' });
-      } else {
-        const result = await criarUsuario(formData);
-        const novoUserId = result?.user?.id || result?.id || result?.userId;
-        if (lojaAtual?.id && novoUserId) {
-          await vincularUsuarioLoja({
-            user_id: novoUserId,
-            loja_id: lojaAtual.id,
-            perfil_id: formData.perfil_id,
-          });
-        }
-        toast({
-          title: 'Usuário criado!',
-          description: 'O novo usuário foi cadastrado com sucesso.',
+      let userId = usuarioSelecionado?.id;
+
+      if (!userId) {
+        const novo = await criarUsuario({
+          nome: formData.nome,
+          email: formData.email,
+          password: formData.password,
+          perfil_id: formData.perfil_id || 'atendente',
+          loja_ids: lojasSelecionadas,
         });
+        userId = novo?.user_id;
+        if (!userId) throw new Error('Não foi possível obter o id do usuário criado.');
       }
 
+      const existentes = vinculosPorUsuario.get(userId) || [];
+      const selecionadasIds = new Set(lojasSelecionadas);
+      const toRemove = existentes.filter((v) => !selecionadasIds.has(v.loja_id));
+
+      await Promise.all(
+        lojasSelecionadas.map((lojaId) =>
+          vincularUsuarioLoja({
+            user_id: userId,
+            loja_id: lojaId,
+            perfil_id: formData.perfil_id || 'atendente',
+          })
+        )
+      );
+
+      await Promise.all(toRemove.map((v) => removerUsuarioLoja(v.id)));
+
+      toast({ title: 'Perfil e lojas atualizados para o usuário!' });
       await carregarDados();
       setDialogAberto(false);
       resetForm();
@@ -119,11 +151,13 @@ function ConfigUsuarios() {
 
   const handleEditar = (usuario) => {
     setUsuarioSelecionado(usuario);
+    const userLinks = vinculosPorUsuario.get(usuario.id) || [];
+    setLojasSelecionadas(userLinks.map((v) => v.loja_id));
     setFormData({
       nome: usuario.nome,
       email: usuario.email,
       password: '',
-      perfil_id: usuario.perfil_id,
+      perfil_id: usuario.perfil_id || 'atendente',
     });
     setDialogAberto(true);
   };
@@ -138,12 +172,12 @@ function ConfigUsuarios() {
     setCarregando(true);
     try {
       await deletarUsuario(usuarioSelecionado.id);
-      toast({ title: 'Usuário excluído com sucesso' });
+      toast({ title: 'Usuario excluido com sucesso' });
       setUsuarios((prev) => prev.filter((u) => u.id !== usuarioSelecionado.id));
       setAlertAberto(false);
     } catch (error) {
       toast({
-        title: 'Erro ao excluir usuário',
+        title: 'Erro ao excluir usuario',
         description: error.message,
         variant: 'destructive',
       });
@@ -158,15 +192,19 @@ function ConfigUsuarios() {
       nome: '',
       email: '',
       password: '',
-      perfil_id: '',
+      perfil_id: 'atendente',
     });
+    setLojasSelecionadas([]);
     setUsuarioSelecionado(null);
   };
 
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="p-4 border-b flex items-center justify-between">
-        <h3 className="font-semibold">Usuários</h3>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Usuarios</h2>
+          <p className="text-sm text-gray-500 mt-1">Gerencie usuarios e acessos.</p>
+        </div>
         <Dialog
           open={dialogAberto}
           onOpenChange={(open) => {
@@ -177,12 +215,12 @@ function ConfigUsuarios() {
           <DialogTrigger asChild>
             <Button size="sm" className="bg-orange-500 hover:bg-orange-600">
               <Plus className="h-4 w-4 mr-2" />
-              Novo Usuário
+              Novo Usuario
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle>{usuarioSelecionado ? 'Editar Usuário' : 'Novo Usuário'}</DialogTitle>
+              <DialogTitle>{usuarioSelecionado ? 'Editar Usuario' : 'Novo Usuario'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -207,22 +245,30 @@ function ConfigUsuarios() {
               </div>
               <div>
                 <Label htmlFor="senha">Senha {!usuarioSelecionado && '*'}</Label>
-                <Input
-                  id="senha"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required={!usuarioSelecionado}
-                  placeholder={usuarioSelecionado ? 'Deixe em branco para não alterar' : ''}
-                />
+                <div className="relative">
+                  <Input
+                    id="senha"
+                    type={mostrarSenha ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    required={!usuarioSelecionado}
+                    placeholder={usuarioSelecionado ? 'Deixe em branco para nao alterar' : ''}
+                  />
+                  <button
+                    type="button"
+                    aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                    className="absolute inset-y-0 right-2 flex items-center text-gray-500"
+                    onClick={() => setMostrarSenha((prev) => !prev)}
+                  >
+                    {mostrarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
               <div>
                 <Label htmlFor="perfil">Perfil *</Label>
                 <Select
-                  value={formData.perfil_id?.toString()}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, perfil_id: parseInt(value, 10) })
-                  }
+                  value={formData.perfil_id}
+                  onValueChange={(value) => setFormData({ ...formData, perfil_id: value })}
                   required
                 >
                   <SelectTrigger>
@@ -230,12 +276,36 @@ function ConfigUsuarios() {
                   </SelectTrigger>
                   <SelectContent>
                     {perfis.map((perfil) => (
-                      <SelectItem key={perfil.id} value={perfil.id.toString()}>
+                      <SelectItem key={perfil.id} value={perfil.id}>
                         {perfil.nome}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label>Lojas</Label>
+                <div className="space-y-2 max-h-48 overflow-auto border rounded-md p-3">
+                  {lojasOptions.map((opt) => {
+                    const checked = lojasSelecionadas.includes(opt.value);
+                    return (
+                      <label key={opt.value} className="flex items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(v) => {
+                            setLojasSelecionadas((prev) =>
+                              v ? [...prev, opt.value] : prev.filter((id) => id !== opt.value)
+                            );
+                          }}
+                        />
+                        <span>{opt.label}</span>
+                      </label>
+                    );
+                  })}
+                  {lojasOptions.length === 0 && (
+                    <p className="text-xs text-gray-500">Nenhuma loja cadastrada.</p>
+                  )}
+                </div>
               </div>
               <div className="flex gap-2 pt-4">
                 <Button
@@ -279,7 +349,7 @@ function ConfigUsuarios() {
                   Perfil
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                  Ações
+                  Acoes
                 </th>
               </tr>
             </thead>
@@ -291,28 +361,27 @@ function ConfigUsuarios() {
                   <td className="px-6 py-4 text-sm text-gray-500">{usuario.perfil?.nome}</td>
                   <td className="px-6 py-4 text-right text-sm">
                     <div className="flex items-center justify-end gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => handleEditar(usuario)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleEditar(usuario)}
-                        disabled={usuario.id === user.id}
+                        onClick={() => abrirModalDelecao(usuario)}
                       >
-                        <Edit className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>
-                      {podeExcluir && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => abrirModalDelecao(usuario)}
-                          disabled={usuario.id === user.id} // Cannot delete self
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      )}
                     </div>
                   </td>
                 </tr>
               ))}
+              {usuarios.length === 0 && (
+                <tr>
+                  <td colSpan="4" className="text-center py-12 text-gray-500">
+                    Nenhum usuario encontrado.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         )}
@@ -321,10 +390,10 @@ function ConfigUsuarios() {
       <AlertDialog open={alertAberto} onOpenChange={setAlertAberto}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir usuário</AlertDialogTitle>
+            <AlertDialogTitle>Excluir usuario</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o usuário <strong>{usuarioSelecionado?.nome}</strong>?
-              Essa ação não poderá ser desfeita.
+              Tem certeza que deseja excluir o usuario <strong>{usuarioSelecionado?.nome}</strong>?
+              Essa acao nao podera ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -343,4 +412,4 @@ function ConfigUsuarios() {
   );
 }
 
-export default ConfigUsuarios;
+export default GestaoUsuarios;

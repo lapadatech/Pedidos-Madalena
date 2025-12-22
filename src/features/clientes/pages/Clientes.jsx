@@ -110,13 +110,14 @@ function Clientes() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
-  const { temPermissao } = useAuth();
+  const { temPermissao, lojaAtual } = useAuth();
   const navigate = useNavigate();
   const [formData, setFormData] = useState(initialState);
   const [celularExistente, setCelularExistente] = useState(false);
   const debouncedBusca = useDebouncedValue(busca, 300);
   const debouncedCelular = useDebouncedValue(formData.celular, 500);
   const [resumoPedidosPorCliente, setResumoPedidosPorCliente] = useState({});
+  const basePath = lojaAtual?.slug ? `/${lojaAtual.slug}` : '';
 
   const carregarClientes = useCallback(
     async (termoBusca) => {
@@ -157,7 +158,7 @@ function Clientes() {
 
       try {
         const ids = clientes.map((cliente) => cliente.id);
-        const resumo = await listarResumoPedidosPorClientes(ids);
+        const resumo = await listarResumoPedidosPorClientes(ids, lojaAtual?.id);
         setResumoPedidosPorCliente(resumo || {});
       } catch (error) {
         console.error('Erro ao carregar resumo de pedidos:', error);
@@ -165,7 +166,7 @@ function Clientes() {
     };
 
     carregarResumo();
-  }, [clientes]);
+  }, [clientes, lojaAtual]);
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
@@ -737,7 +738,7 @@ function Clientes() {
                     <tr
                       key={cliente.id}
                       className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => navigate(`/clientes/${cliente.id}`)}
+                      onClick={() => navigate(`${basePath}/clientes/${cliente.id}`)}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         {(() => {
