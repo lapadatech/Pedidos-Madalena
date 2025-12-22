@@ -53,6 +53,22 @@ const normalizePermissoes = (raw = {}) => {
 };
 
 const permissoesVazias = normalizePermissoes();
+const perfisFallback = [
+  {
+    id: 'gerente',
+    nome: 'Gerente',
+    permissoes: { dashboard: '*', clientes: '*', produtos: '*', pedidos: '*', configuracoes: '*' },
+  },
+  {
+    id: 'atendente',
+    nome: 'Atendente',
+    permissoes: {
+      pedidos: { visualizar: true, editar: true },
+      clientes: { visualizar: true, editar: true },
+      produtos: { visualizar: true },
+    },
+  },
+];
 
 function ConfigPerfis() {
   const [perfis, setPerfis] = useState([]);
@@ -68,11 +84,18 @@ function ConfigPerfis() {
   const carregarPerfis = useCallback(async () => {
     try {
       const data = await listarPerfis();
-      const normalizados = (data || []).map((p) => ({
+      const origem = (data && data.length > 0 ? data : perfisFallback) || perfisFallback;
+      const normalizados = origem.map((p) => ({
         ...p,
         permissoes: normalizePermissoes(p.permissoes),
       }));
       setPerfis(normalizados);
+      if (!data || data.length === 0) {
+        toast({
+          title: 'Perfis padroes carregados',
+          description: 'Nenhum perfil retornado do banco. Usando atendente/gerente padrao.',
+        });
+      }
     } catch (error) {
       toast({
         title: 'Erro ao carregar perfis',

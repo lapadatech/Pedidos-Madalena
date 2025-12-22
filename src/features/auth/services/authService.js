@@ -62,16 +62,15 @@ export const authService = {
 
       const currentSlug = extractSlugFromLocation();
 
-      // Preferir a Edge Function (service role) para evitar stack depth / RLS
+      // Preferir a Edge Function (service role) para evitar stack depth / RLS.
+      // Se falhar (401/404/etc), seguimos para o fallback direto no banco.
       try {
         const { data: fnData, error: fnError } = await supabase.functions.invoke('get-user-profile', {
           body: { storeSlug: currentSlug },
         });
         if (fnError) {
           console.error('Error invoking get-user-profile function:', fnError);
-          return null; // evita fallback pesado que gera stack depth
-        }
-        if (fnData) {
+        } else if (fnData) {
           const lojasFromFn = (fnData.stores || []).map((store) => {
             const roleId = store.role?.id || store.role?.name || store.role || 'atendente';
             const perfil = buildPerfil(roleId, store.role);
@@ -98,7 +97,7 @@ export const authService = {
         }
       } catch (err) {
         console.error('Unexpected error calling get-user-profile function:', err);
-        return null; // evita fallback
+        // continua para fallback
       }
 
       // Fallback direto no banco (pode ser bloqueado por RLS). Só use se realmente precisar.
