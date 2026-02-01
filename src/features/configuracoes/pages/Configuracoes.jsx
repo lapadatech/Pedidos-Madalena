@@ -13,7 +13,7 @@ function Configuracoes() {
     { path: 'tags', icon: Tags, label: 'Tags' },
   ];
 
-  if (!temPermissao('configuracoes', 'visualizar')) {
+  if (!temPermissao('settings', 'read')) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-500">Você não tem permissão para acessar esta página.</p>

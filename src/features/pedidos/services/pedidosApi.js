@@ -1,98 +1,79 @@
 import { handleApiError, safeTerm, supabase } from '@/shared/lib/apiBase';
 
+const normalizeStatusValue = (status) =>
+  typeof status === 'string'
+    ? status.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    : status;
+
+const toDisplayStatus = (status) => {
+  if (status === 'Nao Pago') return 'Não Pago';
+  if (status === 'Nao Entregue') return 'Não Entregue';
+  return status;
+};
+
 export const listarPedidos = async (filtros = {}) => {
   try {
     const raw = filtros.busca?.trim() || '';
     const term = safeTerm(raw);
-    const isNumber = /^\d+$/.test(term);
-
-    let query = supabase.from('pedidos').select(
-      `
-                id,
-                cliente_id,
-                data_entrega,
-                hora_entrega,
-                tipo_entrega,
-                status_pagamento,
-                status_entrega,
-                total,
-                cliente:clientes!inner(id, nome)
-            `,
-      { count: 'exact' }
-    );
-
-    if (filtros.store_id) query = query.eq('store_id', filtros.store_id);
-
-    if (isNumber && term.length > 0) {
-      query = query.eq('id', Number(term));
+    if (!filtros.store_id) {
+      throw new Error('store_id obrigatorio para listar pedidos');
     }
 
-    if (!isNumber && term.length > 0) {
-      query = query.ilike('clientes.nome', `%${term}%`);
-    }
-
-    if (filtros.status_pagamento) query = query.eq('status_pagamento', filtros.status_pagamento);
-
-    if (filtros.status_entrega) query = query.eq('status_entrega', filtros.status_entrega);
+    const payload = {
+      status_pagamento: normalizeStatusValue(filtros.status_pagamento) || null,
+      status_entrega: normalizeStatusValue(filtros.status_entrega) || null,
+      tipo_entrega: filtros.tipo_entrega || null,
+      search: term || null,
+      from_date: filtros.data_entrega_gte || null,
+      to_date: filtros.data_entrega_lte || null,
+    };
 
     if (filtros.status_geral === 'concluidos') {
-      query = query.eq('status_entrega', 'Entregue').eq('status_pagamento', 'Pago');
+      payload.status_pagamento = 'Pago';
+      payload.status_entrega = 'Entregue';
     }
 
-    if (filtros.status_geral === 'abertos') {
-      query = query.or('status_pagamento.neq.Pago,status_entrega.neq.Entregue');
-    }
-
-    if (filtros.cliente_id) query = query.eq('cliente_id', filtros.cliente_id);
-
-    if (filtros.data_entrega_gte) query = query.gte('data_entrega', filtros.data_entrega_gte);
-
-    if (filtros.data_entrega_lte) query = query.lte('data_entrega', filtros.data_entrega_lte);
-
-    if (filtros.specific_status_pagamento && filtros.specific_status_entrega_neq) {
-      query = query
-        .eq('status_pagamento', filtros.specific_status_pagamento)
-        .neq('status_entrega', filtros.specific_status_entrega_neq);
-    }
-
-    const { data, error } = await query;
+    const { data, error } = await supabase.rpc('get_orders', {
+      p_store_id: filtros.store_id,
+      p_filters: payload,
+      p_limit: filtros.limit || 100,
+      p_offset: filtros.offset || 0,
+    });
 
     if (error) throw error;
 
-    const pedidosComCliente = data.map((p) => ({
+    const pedidosComCliente = (data || []).map((p) => ({
       ...p,
-      cliente_nome: p.cliente?.nome || 'Cliente nao encontrado',
+      status_pagamento: toDisplayStatus(p.status_pagamento),
+      status_entrega: toDisplayStatus(p.status_entrega),
+      cliente_nome: p.customer_name_snapshot || 'Cliente nao encontrado',
+      tags: p.tags || [],
+      tag_ids: (p.tags || []).map((t) => t.id),
     }));
 
-    const pedidosIds = pedidosComCliente.map((p) => p.id);
-
-    let pedidosComTags = pedidosComCliente;
-
-    if (pedidosIds.length > 0) {
-      const { data: pedidoTagsData, error: tagsError } = await supabase
-        .from('pedido_tags')
-        .select('pedido_id, tag_id, tags(id, nome, cor)')
-        .in('pedido_id', pedidosIds);
-
-      if (!tagsError && pedidoTagsData) {
-        pedidosComTags = pedidosComCliente.map((pedido) => {
-          const tagsRelacionadas = pedidoTagsData
-            .filter((pt) => pt.pedido_id === pedido.id)
-            .map((pt) => pt.tags)
-            .filter(Boolean);
-
-          return {
-            ...pedido,
-            tags: tagsRelacionadas,
-            tag_ids: tagsRelacionadas.map((t) => t.id),
-          };
-        });
-      }
+    let pedidosFiltrados = pedidosComCliente;
+    if (filtros.status_geral === 'abertos') {
+      pedidosFiltrados = pedidosFiltrados.filter(
+        (pedido) => pedido.status_pagamento !== 'Pago' || pedido.status_entrega !== 'Entregue'
+      );
     }
 
-    let pedidosFiltrados = pedidosComTags;
+    if (filtros.specific_status_pagamento && filtros.specific_status_entrega_neq) {
+      pedidosFiltrados = pedidosFiltrados.filter(
+        (pedido) =>
+          pedido.status_pagamento === filtros.specific_status_pagamento &&
+          pedido.status_entrega !== filtros.specific_status_entrega_neq
+      );
+    }
+
+    if (filtros.cliente_id) {
+      pedidosFiltrados = pedidosFiltrados.filter(
+        (pedido) => pedido.cliente_id === filtros.cliente_id
+      );
+    }
+
     if (filtros.tag_ids && Array.isArray(filtros.tag_ids) && filtros.tag_ids.length > 0) {
-      pedidosFiltrados = pedidosComTags.filter((pedido) => {
+      pedidosFiltrados = pedidosFiltrados.filter((pedido) => {
         if (!pedido.tags || pedido.tags.length === 0) return false;
         return pedido.tags.some((tag) => filtros.tag_ids.includes(tag.id));
       });
@@ -129,27 +110,41 @@ export const obterTotalPedidosGeral = async (filtros = {}) => {
   }
 };
 
-export const obterPedidoCompleto = async (id) => {
+export const obterPedidoCompleto = async (id, storeId) => {
   try {
-    const { data, error } = await supabase
-      .from('pedidos')
-      .select(
-        '*, cliente:clientes(*), endereco_entrega:enderecos!endereco_entrega_id(*), itens:itens_pedido(*, produtos(nome))'
-      )
-      .eq('id', id)
-      .single();
+    if (!storeId) {
+      throw new Error('store_id obrigatorio para obter pedido completo');
+    }
+
+    const { data, error } = await supabase.rpc('get_order_by_id', {
+      p_store_id: storeId,
+      p_pedido_id: id,
+    });
 
     if (error) throw error;
 
-    const { data: pedidoTagsData } = await supabase
-      .from('pedido_tags')
-      .select('tag_id, tags(id, nome, cor)')
-      .eq('pedido_id', id);
+    const tags = data?.tags || [];
+    const itens = (data?.itens || []).map((item) => ({
+      ...item,
+      produtos: item.produtos || { nome: item.product_name_snapshot || 'Produto' },
+    }));
 
-    const tags = (pedidoTagsData || []).map((pt) => pt.tags).filter(Boolean);
+    const cliente = {
+      id: data?.cliente_id,
+      nome: data?.customer_name_snapshot || 'Cliente',
+      celular: data?.customer_phone_snapshot || '',
+      email: '',
+    };
+
+    const endereco_entrega = data?.delivery_address_snapshot || null;
 
     return {
       ...data,
+      status_pagamento: toDisplayStatus(data?.status_pagamento),
+      status_entrega: toDisplayStatus(data?.status_entrega),
+      itens,
+      cliente,
+      endereco_entrega,
       _tags: tags,
       _tag_ids: tags.map((t) => t.id),
     };
@@ -167,28 +162,28 @@ export const criarPedido = async (pedidoData) => {
     delete pedido._tag_ids;
     delete pedido._tags;
 
-    const { data: novoPedido, error: pedidoError } = await supabase
-      .from('pedidos')
-      .insert({
-        ...pedido,
-        cliente_id: cliente.id,
-        store_id: pedido.store_id,
-      })
-      .select()
-      .single();
+    const payload = {
+      ...pedido,
+      status_pagamento: normalizeStatusValue(pedido.status_pagamento),
+      status_entrega: normalizeStatusValue(pedido.status_entrega),
+      cliente_id: cliente?.id,
+      cliente,
+      itens,
+      tag_ids: pedidoData.tag_ids || pedidoData._tag_ids || [],
+    };
 
-    if (pedidoError) throw pedidoError;
+    const { data: result, error } = await supabase.rpc('create_order', {
+      p_store_id: pedido.store_id,
+      p_payload: payload,
+    });
 
-    const itensComPedidoId = itens.map(({ id, produto_nome, valor_total, ...item }) => ({
-      ...item,
-      pedido_id: novoPedido.id,
-    }));
+    if (error) throw error;
 
-    const { error: itensError } = await supabase.from('itens_pedido').insert(itensComPedidoId);
-
-    if (itensError) throw itensError;
-
-    return novoPedido;
+    return {
+      id: result?.pedido_id,
+      public_id: result?.public_id,
+      order_number: result?.order_number,
+    };
   } catch (error) {
     handleApiError(error, 'criar pedido');
   }
@@ -196,15 +191,14 @@ export const criarPedido = async (pedidoData) => {
 
 export const atualizarPedido = async (pedidoId, data) => {
   try {
-    const { data: result, error } = await supabase
-      .from('pedidos')
-      .update(data)
-      .eq('id', pedidoId)
-      .select()
-      .single();
+    const { error } = await supabase.rpc('set_order_status', {
+      p_pedido_id: pedidoId,
+      p_status_pagamento: normalizeStatusValue(data.status_pagamento) ?? null,
+      p_status_entrega: normalizeStatusValue(data.status_entrega) ?? null,
+    });
 
     if (error) throw error;
-    return result;
+    return true;
   } catch (error) {
     handleApiError(error, 'atualizar pedido');
   }
@@ -221,38 +215,28 @@ export const atualizarPedidoCompleto = async (pedidoId, pedidoData) => {
 
     const { id, ...dadosParaAtualizar } = pedidoInfo;
 
-    const pedidoParaSalvar = {
+    const payload = {
       ...dadosParaAtualizar,
+      status_pagamento: normalizeStatusValue(dadosParaAtualizar.status_pagamento),
+      status_entrega: normalizeStatusValue(dadosParaAtualizar.status_entrega),
       cliente_id: cliente?.id || pedidoInfo.cliente_id,
+      cliente,
+      endereco_entrega,
+      itens,
+      tag_ids: pedidoData.tag_ids || pedidoData._tag_ids || [],
     };
 
-    const { data: pedidoAtualizado, error: pedidoError } = await supabase
-      .from('pedidos')
-      .update(pedidoParaSalvar)
-      .eq('id', pedidoId)
-      .select()
-      .single();
+    const { data: result, error } = await supabase.rpc('update_order', {
+      p_pedido_id: pedidoId,
+      p_payload: payload,
+    });
 
-    if (pedidoError) throw pedidoError;
+    if (error) throw error;
 
-    await supabase.from('itens_pedido').delete().eq('pedido_id', pedidoId);
-
-    const itensNormalizados = itens.map((item) => ({
-      pedido_id: pedidoId,
-      produto_id: item.produto_id,
-      quantidade: item.quantidade,
-      observacao: item.observacao,
-      complementos: item.complementos,
-      valor_unitario: item.valor_unitario,
-    }));
-
-    if (itensNormalizados.length > 0) {
-      const { error: insertError } = await supabase.from('itens_pedido').insert(itensNormalizados);
-
-      if (insertError) throw insertError;
-    }
-
-    return pedidoAtualizado;
+    return {
+      id: pedidoId,
+      ok: result?.ok ?? true,
+    };
   } catch (error) {
     handleApiError(error, 'atualizar pedido completo');
   }
@@ -260,9 +244,8 @@ export const atualizarPedidoCompleto = async (pedidoId, pedidoData) => {
 
 export const deletarPedido = async (id) => {
   try {
-    await supabase.from('pedido_tags').delete().eq('pedido_id', id);
-    await supabase.from('itens_pedido').delete().eq('pedido_id', id);
-    await supabase.from('pedidos').delete().eq('id', id);
+    const { error } = await supabase.rpc('delete_order', { p_pedido_id: id });
+    if (error) throw error;
   } catch (error) {
     handleApiError(error, 'deletar pedido');
   }

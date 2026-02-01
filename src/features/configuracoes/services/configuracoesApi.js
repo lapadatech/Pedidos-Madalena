@@ -1,5 +1,70 @@
 import { handleApiError, supabase } from '@/shared/lib/apiBase';
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+const decodeJwt = (token) => {
+  try {
+    const payload = token.split('.')[1];
+    const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+};
+
+const getAccessToken = async () => {
+  let session = (await supabase.auth.getSession())?.data?.session || null;
+  if (!session?.access_token) {
+    const refreshed = await supabase.auth.refreshSession();
+    session = refreshed?.data?.session || null;
+  }
+
+  let token = session?.access_token;
+  if (!token && typeof window !== 'undefined') {
+    const projectRef = SUPABASE_URL?.replace('https://', '').split('.')[0];
+    const raw = projectRef
+      ? window.localStorage.getItem(`sb-${projectRef}-auth-token`)
+      : null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      token = parsed?.access_token || null;
+    }
+  }
+
+  if (!token) {
+    throw new Error('Sessao expirada. Faca login novamente.');
+  }
+
+  const payload = decodeJwt(token);
+  if (!payload || payload.role !== 'authenticated' || !payload.sub) {
+    throw new Error('Sessao invalida. Faca login novamente.');
+  }
+
+  return token;
+};
+
+const callAdminUsers = async (payload) => {
+  const token = await getAccessToken();
+
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      apikey: SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const json = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(json?.error || 'Erro na Edge Function.');
+  }
+
+  return json;
+};
+
 // Usuarios
 export const listarUsuarios = async () => {
   try {
@@ -46,38 +111,56 @@ export const listarUsuarios = async () => {
     });
   } catch (error) {
     handleApiError(error, 'listar usuarios');
+    return [];
   }
 };
 
 export const criarUsuario = async ({ nome, email, password, perfil_id, loja_ids }) => {
   try {
-    const { data, error } = await supabase.functions.invoke('create-store-user', {
-      body: {
-        full_name: nome,
-        email,
-        password,
-        role: perfil_id,
-        store_ids: loja_ids,
-      },
+    const storeId = Array.isArray(loja_ids) ? loja_ids[0] : null;
+    if (!storeId) {
+      throw new Error('store_id obrigatorio para criar usuario');
+    }
+
+    const action = password ? 'create_user' : 'invite_user';
+    return await callAdminUsers({
+      action,
+      full_name: nome,
+      email,
+      password: password || null,
+      store_id: storeId,
+      role_id: perfil_id,
     });
-    if (error) throw error;
-    if (data?.error) throw new Error(data.error);
-    return data;
   } catch (error) {
     handleApiError(error, 'criar usuario via function');
   }
 };
 
-export const atualizarUsuario = async () => {
-  throw new Error(
-    'Atualização de usuários requer chave service role ou endpoint backend seguro. Configure o backend e atualize esta função.'
-  );
+export const atualizarUsuario = async (userId, data = {}) => {
+  try {
+    if (!userId) throw new Error('user_id obrigatorio');
+    if (!data.password) return true;
+
+    return await callAdminUsers({
+      action: 'reset_password',
+      user_id: userId,
+    });
+  } catch (error) {
+    handleApiError(error, 'resetar senha do usuario');
+  }
 };
 
-export const deletarUsuario = async () => {
-  throw new Error(
-    'Exclusão de usuários requer chave service role ou endpoint backend seguro. Configure o backend e atualize esta função.'
-  );
+export const deletarUsuario = async (userId) => {
+  try {
+    if (!userId) throw new Error('user_id obrigatorio');
+    return await callAdminUsers({
+      action: 'set_user_enabled',
+      user_id: userId,
+      enabled: false,
+    });
+  } catch (error) {
+    handleApiError(error, 'desativar usuario');
+  }
 };
 
 // Perfis
@@ -86,7 +169,6 @@ export const listarPerfis = async () => {
     const { data, error } = await supabase
       .from('store_roles')
       .select('id, name, permissions')
-      .in('id', ['gerente', 'atendente'])
       .order('name');
     if (error) throw error;
     const origem =
@@ -97,20 +179,35 @@ export const listarPerfis = async () => {
               id: 'gerente',
               name: 'Gerente',
               permissions: {
-                dashboard: '*',
-                clientes: '*',
-                produtos: '*',
-                pedidos: '*',
-                configuracoes: '*',
+                dashboard: { read: true },
+                orders: {
+                  read: true,
+                  create: true,
+                  update: true,
+                  delete: true,
+                  print: true,
+                  status: true,
+                },
+                customers: { read: true, create: true, update: true, delete: true },
+                products: { read: true, create: true, update: true, delete: true },
+                settings: { read: true, update: true },
               },
             },
             {
               id: 'atendente',
               name: 'Atendente',
               permissions: {
-                pedidos: { visualizar: true, editar: true },
-                clientes: { visualizar: true, editar: true },
-                produtos: { visualizar: true },
+                dashboard: { read: true },
+                orders: {
+                  read: true,
+                  create: true,
+                  update: true,
+                  delete: false,
+                  print: false,
+                  status: true,
+                },
+                customers: { read: true, create: true, update: true, delete: false },
+                products: { read: true, create: false, update: false, delete: false },
               },
             },
           ];
@@ -127,20 +224,35 @@ export const listarPerfis = async () => {
         id: 'gerente',
         nome: 'Gerente',
         permissoes: {
-          dashboard: '*',
-          clientes: '*',
-          produtos: '*',
-          pedidos: '*',
-          configuracoes: '*',
+          dashboard: { read: true },
+          orders: {
+            read: true,
+            create: true,
+            update: true,
+            delete: true,
+            print: true,
+            status: true,
+          },
+          customers: { read: true, create: true, update: true, delete: true },
+          products: { read: true, create: true, update: true, delete: true },
+          settings: { read: true, update: true },
         },
       },
       {
         id: 'atendente',
         nome: 'Atendente',
         permissoes: {
-          pedidos: { visualizar: true, editar: true },
-          clientes: { visualizar: true, editar: true },
-          produtos: { visualizar: true },
+          dashboard: { read: true },
+          orders: {
+            read: true,
+            create: true,
+            update: true,
+            delete: false,
+            print: false,
+            status: true,
+          },
+          customers: { read: true, create: true, update: true, delete: false },
+          products: { read: true, create: false, update: false, delete: false },
         },
       },
     ];
@@ -157,7 +269,11 @@ export const atualizarPerfil = async (id, data) => {
       name: data.nome,
       permissions: data.permissoes,
     };
-    const { error } = await supabase.from('store_roles').update(payload).eq('id', id);
+    const { error } = await supabase.rpc('update_role', {
+      p_role_id: id,
+      p_name: payload.name,
+      p_permissions: payload.permissions,
+    });
     if (error) throw error;
     return true;
   } catch (error) {
@@ -172,11 +288,11 @@ export const deletarPerfil = async () => {
 // Usuarios por loja
 export const vincularUsuarioLoja = async ({ user_id, loja_id, perfil_id }) => {
   try {
-    const { data, error } = await supabase
-      .from('user_store_access')
-      .upsert({ user_id, store_id: loja_id, role: perfil_id }, { onConflict: 'user_id,store_id' })
-      .select()
-      .single();
+    const { data, error } = await supabase.rpc('grant_user_store_access', {
+      p_user_id: user_id,
+      p_store_id: loja_id,
+      p_role_id: perfil_id,
+    });
     if (error) throw error;
     return data;
   } catch (error) {

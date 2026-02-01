@@ -15,7 +15,7 @@ import AlterarSenhaDialog from '@/shared/components/AlterarSenhaDialog';
 function Header() {
   const { usuario, signOut, lojaAtual, perfilAtual, lojas, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const { slug } = useParams();
+  const { storeSlug } = useParams();
   const [dialogSenhaAberto, setDialogSenhaAberto] = useState(false);
   const podeAcessarGestao =
     isAdmin ||
@@ -23,8 +23,8 @@ function Header() {
 
   const handleLogout = async () => {
     await signOut();
-    if (slug) {
-      navigate(`/${slug}/login`);
+    if (storeSlug) {
+      navigate(`/${storeSlug}/login`);
     } else {
       navigate('/admin/login');
     }

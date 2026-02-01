@@ -1,29 +1,130 @@
 import { supabase } from '@/shared/lib/customSupabaseClient';
 
+const MODULE_ALIASES = {
+  pedidos: 'orders',
+  clientes: 'customers',
+  produtos: 'products',
+  configuracoes: 'settings',
+};
+
+const normalizePermissoes = (raw = {}) => {
+  const normalized = {};
+
+  Object.entries(raw || {}).forEach(([modulo, value]) => {
+    const mappedModule = MODULE_ALIASES[modulo] || modulo;
+    if (value === '*') {
+      normalized[mappedModule] = {
+        read: true,
+        create: true,
+        update: true,
+        delete: true,
+        print: true,
+        status: true,
+      };
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      const has = (acao) => value.includes(acao) || value.includes('*');
+      normalized[mappedModule] = {
+        read: has('read') || has('visualizar'),
+        create: has('create') || has('criar') || has('editar'),
+        update: has('update') || has('editar'),
+        delete: has('delete') || has('gerenciar'),
+        print: has('print') || has('imprimir'),
+        status: has('status'),
+      };
+      return;
+    }
+
+    if (value && typeof value === 'object') {
+      const hasLegacy =
+        'visualizar' in value || 'editar' in value || 'gerenciar' in value || 'excluir' in value;
+      if (hasLegacy) {
+        const visualizar = !!value.visualizar || !!value.editar || !!value.gerenciar;
+        const editar = !!value.editar || !!value.gerenciar;
+        const gerenciar = !!value.gerenciar || !!value.excluir;
+        normalized[mappedModule] = {
+          read: visualizar,
+          create: editar,
+          update: editar,
+          delete: gerenciar,
+          print: visualizar,
+          status: editar,
+        };
+        return;
+      }
+
+      normalized[mappedModule] = {
+        read: !!value.read,
+        create: !!value.create,
+        update: !!value.update,
+        delete: !!value.delete,
+        print: !!value.print,
+        status: !!value.status,
+      };
+      return;
+    }
+
+    normalized[mappedModule] = {
+      read: false,
+      create: false,
+      update: false,
+      delete: false,
+      print: false,
+      status: false,
+    };
+  });
+
+  return normalized;
+};
+
 const buildPerfilFallback = (role) => {
   if (!role)
     return {
       nome: 'Atendente',
-      permissoes: {
-        pedidos: '*',
-        clientes: { visualizar: true, editar: true },
-        produtos: { visualizar: true },
-      },
+      permissoes: normalizePermissoes({
+        dashboard: { read: true },
+        orders: {
+          read: true,
+          create: true,
+          update: true,
+          delete: false,
+          print: false,
+          status: true,
+        },
+        customers: { read: true, create: true, update: true, delete: false },
+        products: { read: true },
+      }),
     };
   const normalized = role.toLowerCase();
   if (normalized === 'gerente') {
     return {
       nome: 'Gerente',
-      permissoes: { pedidos: '*', clientes: '*', produtos: '*', configuracoes: '*' },
+      permissoes: normalizePermissoes({
+        dashboard: { read: true },
+        orders: '*',
+        customers: '*',
+        products: '*',
+        settings: { read: true, update: true },
+      }),
     };
   }
   return {
     nome: normalized.charAt(0).toUpperCase() + normalized.slice(1),
-    permissoes: {
-      pedidos: '*',
-      clientes: { visualizar: true, editar: true },
-      produtos: { visualizar: true },
-    },
+    permissoes: normalizePermissoes({
+      dashboard: { read: true },
+      orders: {
+        read: true,
+        create: true,
+        update: true,
+        delete: false,
+        print: false,
+        status: true,
+      },
+      customers: { read: true, create: true, update: true, delete: false },
+      products: { read: true },
+    }),
   };
 };
 
@@ -31,18 +132,10 @@ const buildPerfil = (role, storeRoleRow) => {
   if (storeRoleRow?.permissions) {
     return {
       nome: storeRoleRow.name || role || 'Perfil',
-      permissoes: storeRoleRow.permissions,
+      permissoes: normalizePermissoes(storeRoleRow.permissions),
     };
   }
   return buildPerfilFallback(role);
-};
-
-const extractSlugFromLocation = () => {
-  if (typeof window === 'undefined') return null;
-  const segments = window.location.pathname.split('/').filter(Boolean);
-  if (!segments.length) return null;
-  if (segments[0] === 'admin') return null;
-  return segments[0];
 };
 
 export const authService = {
@@ -58,6 +151,8 @@ export const authService = {
 
   async getUserProfile(userId) {
     if (!userId) return null;
+
+    // Fallback direto no banco (pode ser bloqueado por RLS). So use se realmente precisar.
     try {
       const {
         data: { user: authUser },
@@ -68,50 +163,7 @@ export const authService = {
         return null;
       }
 
-      const currentSlug = extractSlugFromLocation();
-
-      // Preferir a Edge Function (service role) para evitar stack depth / RLS.
-      // Se falhar (401/404/etc), seguimos para o fallback direto no banco.
-      try {
-        const { data: fnData, error: fnError } = await supabase.functions.invoke(
-          'get-user-profile',
-          {
-            body: { storeSlug: currentSlug },
-          }
-        );
-        if (fnError) {
-          console.error('Error invoking get-user-profile function:', fnError);
-        } else if (fnData) {
-          const lojasFromFn = (fnData.stores || []).map((store) => {
-            const roleId = store.role?.id || store.role?.name || store.role || 'atendente';
-            const perfil = buildPerfil(roleId, store.role);
-            return {
-              id: store.id,
-              nome: store.name,
-              slug: store.slug,
-              ativo: store.active ?? true,
-              role: roleId,
-              perfil,
-            };
-          });
-
-          return {
-            id: fnData.user_id || authUser.id,
-            nome:
-              fnData.profile?.full_name ||
-              authUser.email?.split('@')[0]?.toUpperCase() ||
-              'USUARIO',
-            email: authUser.email,
-            lojas: lojasFromFn,
-            is_admin: !!fnData.is_admin,
-          };
-        }
-      } catch (err) {
-        console.error('Unexpected error calling get-user-profile function:', err);
-        // continua para fallback
-      }
-
-      // Fallback direto no banco (pode ser bloqueado por RLS). Só use se realmente precisar.
+      // Fallback direto no banco (pode ser bloqueado por RLS). So use se realmente precisar.
       const { data: adminRow } = await supabase
         .from('platform_admin_profiles')
         .select('id, user_id, full_name')

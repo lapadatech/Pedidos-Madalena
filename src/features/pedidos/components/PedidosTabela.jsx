@@ -101,7 +101,7 @@ function PedidosTabela({ pedidos, onAbrirDetalhe, loading }) {
                       {isConcluido ? 'Concluído' : 'Aberto'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-medium">#{pedido.id}</TableCell>
+                  <TableCell className="font-medium">#{pedido.order_number ?? pedido.id}</TableCell>
                   <TableCell>{pedido.cliente_nome}</TableCell>
                   <TableCell>{formatDate(pedido.data_entrega)}</TableCell>
                   <TableCell>{formatTime(pedido.hora_entrega)}</TableCell>

@@ -1,4 +1,4 @@
-import { handleApiError, safeTerm, genericFetch, supabase } from '@/shared/lib/apiBase';
+import { handleApiError, safeTerm, supabase } from '@/shared/lib/apiBase';
 
 export const listarClientes = async (filtros = {}) => {
   try {
@@ -35,25 +35,37 @@ export const obterCliente = async (id) => {
   }
 };
 
-export const criarCliente = (data) =>
-  genericFetch('clientes', {
-    method: 'insert',
-    data,
-    select: 'id, nome, celular',
-  });
+export const criarCliente = async (data, storeId) => {
+  try {
+    const { data: result, error } = await supabase.rpc('create_customer', {
+      p_store_id: storeId || null,
+      p_payload: data,
+    });
+    if (error) throw error;
+    return result ? [result] : [];
+  } catch (error) {
+    handleApiError(error, 'criar cliente');
+  }
+};
 
-export const atualizarCliente = (id, data) =>
-  genericFetch('clientes', {
-    method: 'update',
-    data,
-    id,
-    select: 'id, nome',
-  });
+export const atualizarCliente = async (id, data) => {
+  try {
+    const { data: result, error } = await supabase.rpc('update_customer', {
+      p_cliente_id: id,
+      p_payload: data,
+    });
+    if (error) throw error;
+    return result;
+  } catch (error) {
+    handleApiError(error, 'atualizar cliente');
+  }
+};
 
 export const deletarCliente = async (id) => {
   try {
-    await supabase.from('enderecos').delete().eq('cliente_id', id);
-    return await genericFetch('clientes', { method: 'delete', id });
+    const { error } = await supabase.rpc('delete_customer', { p_cliente_id: id });
+    if (error) throw error;
+    return true;
   } catch (error) {
     handleApiError(error, 'deletar cliente');
   }
@@ -90,12 +102,40 @@ export const listarEnderecos = async (clienteId) => {
   }
 };
 
-export const criarEndereco = (data) => genericFetch('enderecos', { method: 'insert', data });
+export const criarEndereco = async (data) => {
+  try {
+    const { data: result, error } = await supabase.rpc('create_address', {
+      p_payload: data,
+    });
+    if (error) throw error;
+    return result;
+  } catch (error) {
+    handleApiError(error, 'criar endereco');
+  }
+};
 
-export const atualizarEndereco = (id, data) =>
-  genericFetch('enderecos', { method: 'update', data, id });
+export const atualizarEndereco = async (id, data) => {
+  try {
+    const { data: result, error } = await supabase.rpc('update_address', {
+      p_endereco_id: id,
+      p_payload: data,
+    });
+    if (error) throw error;
+    return result;
+  } catch (error) {
+    handleApiError(error, 'atualizar endereco');
+  }
+};
 
-export const deletarEndereco = (id) => genericFetch('enderecos', { method: 'delete', id });
+export const deletarEndereco = async (id) => {
+  try {
+    const { error } = await supabase.rpc('delete_address', { p_endereco_id: id });
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    handleApiError(error, 'deletar endereco');
+  }
+};
 
 export const buscarCep = async (cep) => {
   try {

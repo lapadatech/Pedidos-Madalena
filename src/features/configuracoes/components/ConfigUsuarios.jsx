@@ -92,8 +92,11 @@ function ConfigUsuarios() {
         }
         toast({ title: 'Usuário atualizado!' });
       } else {
-        const result = await criarUsuario(formData);
-        const novoUserId = result?.user?.id || result?.id || result?.userId;
+        const result = await criarUsuario({
+          ...formData,
+          loja_ids: lojaAtual?.id ? [lojaAtual.id] : [],
+        });
+        const novoUserId = result?.user_id || result?.user?.id || result?.id || result?.userId;
         if (lojaAtual?.id && novoUserId) {
           await vincularUsuarioLoja({
             user_id: novoUserId,
@@ -219,10 +222,8 @@ function ConfigUsuarios() {
               <div>
                 <Label htmlFor="perfil">Perfil *</Label>
                 <Select
-                  value={formData.perfil_id?.toString()}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, perfil_id: parseInt(value, 10) })
-                  }
+                  value={formData.perfil_id || ''}
+                  onValueChange={(value) => setFormData({ ...formData, perfil_id: value })}
                   required
                 >
                   <SelectTrigger>
@@ -230,7 +231,7 @@ function ConfigUsuarios() {
                   </SelectTrigger>
                   <SelectContent>
                     {perfis.map((perfil) => (
-                      <SelectItem key={perfil.id} value={perfil.id.toString()}>
+                      <SelectItem key={perfil.id} value={perfil.id}>
                         {perfil.nome}
                       </SelectItem>
                     ))}

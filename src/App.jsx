@@ -29,18 +29,18 @@ const LoadingScreen = () => (
   </div>
 );
 
-const getPrimeiraRotaPermitida = (slug, temPermissao) => {
-  if (!slug) return '/lojas';
+const getPrimeiraRotaPermitida = (storeSlug, temPermissao) => {
+  if (!storeSlug) return '/lojas';
 
   const rotas = [
-    { modulo: 'dashboard', path: `/${slug}/dashboard` },
-    { modulo: 'pedidos', path: `/${slug}/pedidos` },
-    { modulo: 'clientes', path: `/${slug}/clientes` },
-    { modulo: 'produtos', path: `/${slug}/produtos` },
+    { modulo: 'dashboard', path: `/${storeSlug}/dashboard` },
+    { modulo: 'orders', path: `/${storeSlug}/pedidos` },
+    { modulo: 'customers', path: `/${storeSlug}/clientes` },
+    { modulo: 'products', path: `/${storeSlug}/produtos` },
   ];
 
-  const rotaPermitida = rotas.find((rota) => temPermissao(rota.modulo, 'visualizar'));
-  return rotaPermitida ? rotaPermitida.path : `/${slug}/login`;
+  const rotaPermitida = rotas.find((rota) => temPermissao(rota.modulo, 'read'));
+  return rotaPermitida ? rotaPermitida.path : `/${storeSlug}/login`;
 };
 
 function AdminGuard({ children }) {
@@ -65,7 +65,7 @@ function AdminGuard({ children }) {
 
 function StoreGuard({ children }) {
   const { loading, session, selecionarLojaPorSlug, lojaAtual, isAdmin, signOut } = useAuth();
-  const { slug } = useParams();
+  const { storeSlug } = useParams();
   const navigate = useNavigate();
   const [validando, setValidando] = useState(true);
 
@@ -77,38 +77,38 @@ function StoreGuard({ children }) {
       return;
     }
     if (!session) {
-      if (slug) {
-        navigate(`/${slug}/login`, { replace: true });
+      if (storeSlug) {
+        navigate(`/${storeSlug}/login`, { replace: true });
       } else {
         navigate('/admin/login', { replace: true });
       }
       return;
     }
 
-    if (slug) {
-      const ok = selecionarLojaPorSlug(slug);
+    if (storeSlug) {
+      const ok = selecionarLojaPorSlug(storeSlug);
       if (!ok) {
         navigate('/lojas', { replace: true });
         return;
       }
     }
     setValidando(false);
-  }, [loading, session, selecionarLojaPorSlug, slug, navigate, isAdmin, signOut]);
+  }, [loading, session, selecionarLojaPorSlug, storeSlug, navigate, isAdmin, signOut]);
 
   if (loading || validando) {
     return <LoadingScreen />;
   }
 
-  if (slug && !lojaAtual) {
+  if (storeSlug && !lojaAtual) {
     return null;
   }
 
   return children;
 }
 
-function ProtectedRoute({ modulo, acao = 'visualizar', children }) {
+function ProtectedRoute({ modulo, acao = 'read', children }) {
   const { loading, temPermissao } = useAuth();
-  const { slug } = useParams();
+  const { storeSlug } = useParams();
   const location = useLocation();
 
   if (loading) {
@@ -116,7 +116,7 @@ function ProtectedRoute({ modulo, acao = 'visualizar', children }) {
   }
 
   if (!temPermissao(modulo, acao)) {
-    const fallback = getPrimeiraRotaPermitida(slug, temPermissao);
+    const fallback = getPrimeiraRotaPermitida(storeSlug, temPermissao);
     return <Navigate to={fallback} state={{ from: location }} replace />;
   }
 
@@ -142,7 +142,7 @@ function App() {
         <Route path="perfis" element={<GestaoPerfis />} />
       </Route>
 
-      <Route path="/:slug/login" element={<Login />} />
+      <Route path="/:storeSlug/login" element={<Login />} />
       <Route
         path="/lojas"
         element={
@@ -152,7 +152,7 @@ function App() {
         }
       />
       <Route
-        path="/:slug"
+        path="/:storeSlug"
         element={
           <StoreGuard>
             <Layout />
@@ -171,7 +171,7 @@ function App() {
         <Route
           path="clientes"
           element={
-            <ProtectedRoute modulo="clientes">
+            <ProtectedRoute modulo="customers">
               <Clientes />
             </ProtectedRoute>
           }
@@ -179,7 +179,7 @@ function App() {
         <Route
           path="clientes/:id"
           element={
-            <ProtectedRoute modulo="clientes">
+            <ProtectedRoute modulo="customers">
               <ClienteDetalhe />
             </ProtectedRoute>
           }
@@ -187,7 +187,7 @@ function App() {
         <Route
           path="produtos"
           element={
-            <ProtectedRoute modulo="produtos">
+            <ProtectedRoute modulo="products">
               <Produtos />
             </ProtectedRoute>
           }
@@ -195,7 +195,7 @@ function App() {
         <Route
           path="pedidos"
           element={
-            <ProtectedRoute modulo="pedidos">
+            <ProtectedRoute modulo="orders">
               <Pedidos />
             </ProtectedRoute>
           }
@@ -203,7 +203,7 @@ function App() {
         <Route
           path="configuracoes"
           element={
-            <ProtectedRoute modulo="configuracoes">
+            <ProtectedRoute modulo="settings">
               <Configuracoes />
             </ProtectedRoute>
           }

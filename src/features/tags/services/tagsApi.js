@@ -12,7 +12,7 @@ export const listarTags = async () => {
 
 export const criarTag = async (data) => {
   try {
-    const { data: result, error } = await supabase.from('tags').insert(data).select().single();
+    const { data: result, error } = await supabase.rpc('create_tag', { p_payload: data });
     if (error) throw error;
     return result;
   } catch (error) {
@@ -22,12 +22,10 @@ export const criarTag = async (data) => {
 
 export const atualizarTag = async (id, data) => {
   try {
-    const { data: result, error } = await supabase
-      .from('tags')
-      .update(data)
-      .eq('id', id)
-      .select()
-      .single();
+    const { data: result, error } = await supabase.rpc('update_tag', {
+      p_tag_id: id,
+      p_payload: data,
+    });
     if (error) throw error;
     return result;
   } catch (error) {
@@ -37,7 +35,7 @@ export const atualizarTag = async (id, data) => {
 
 export const deletarTag = async (id) => {
   try {
-    const { error } = await supabase.from('tags').delete().eq('id', id);
+    const { error } = await supabase.rpc('delete_tag', { p_tag_id: id });
     if (error) throw error;
   } catch (error) {
     handleApiError(error, 'deletar tag');
@@ -46,19 +44,14 @@ export const deletarTag = async (id) => {
 
 export const vincularTagsPedido = async (pedidoId, tagIds = []) => {
   try {
-    await supabase.from('pedido_tags').delete().eq('pedido_id', pedidoId);
+    const { error } = await supabase.rpc('update_order', {
+      p_pedido_id: pedidoId,
+      p_payload: { tag_ids: tagIds },
+    });
 
-    if (!tagIds.length) {
-      return [];
-    }
-
-    const inserts = tagIds.map((tagId) => ({
-      pedido_id: pedidoId,
-      tag_id: tagId,
-    }));
-
-    const { error } = await supabase.from('pedido_tags').insert(inserts);
     if (error) throw error;
+
+    if (!tagIds.length) return [];
 
     const { data, error: fetchError } = await supabase
       .from('pedido_tags')

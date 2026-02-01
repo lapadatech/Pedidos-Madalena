@@ -158,7 +158,9 @@ function GestaoUsuarios() {
         )
       );
 
-      await Promise.all(toRemove.map((v) => removerUsuarioLoja(v.id)));
+      await Promise.all(
+        toRemove.map((v) => removerUsuarioLoja({ user_id: v.user_id, store_id: v.loja_id }))
+      );
 
       toast({ title: 'Perfil e lojas atualizados para o usuário!' });
       await carregarDados();

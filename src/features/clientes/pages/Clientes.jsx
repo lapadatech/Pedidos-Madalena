@@ -344,7 +344,7 @@ function Clientes() {
           title: 'Cliente atualizado!',
         });
       } else {
-        const [novoCliente] = await criarCliente(clienteData);
+        const [novoCliente] = await criarCliente(clienteData, lojaAtual?.id);
         clienteId = novoCliente.id;
         toast({
           title: 'Cliente cadastrado!',
@@ -433,7 +433,9 @@ function Clientes() {
       }
     }
   };
-  const podeEditar = temPermissao('clientes', 'editar');
+  const podeCriar = temPermissao('customers', 'create');
+  const podeEditar = temPermissao('customers', 'update');
+  const podeExcluir = temPermissao('customers', 'delete');
   const handleExportExcel = () => {
     if (!clientes.length) {
       toast({
@@ -488,7 +490,7 @@ function Clientes() {
               <Download className="h-4 w-4 mr-2" />
               Exportar Excel
             </Button>
-            {podeEditar && (
+            {podeCriar && (
               <Button className="bg-orange-500 hover:bg-orange-600" onClick={handleNovo}>
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Cliente
@@ -778,22 +780,26 @@ function Clientes() {
                         })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        {podeEditar && (
+                        {(podeEditar || podeExcluir) && (
                           <div className="flex gap-1 justify-end">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => handleEditar(cliente, e)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => handleDeletar(cliente.id, e)}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
+                            {podeEditar && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => handleEditar(cliente, e)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {podeExcluir && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => handleDeletar(cliente.id, e)}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            )}
                           </div>
                         )}
                       </td>

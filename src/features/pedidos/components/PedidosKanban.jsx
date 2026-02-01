@@ -90,7 +90,7 @@ const PedidoCard = ({ pedido, onAbrirDetalhe }) => {
         <h4 className="font-bold text-base truncate">{pedido.cliente_nome}</h4>
 
         <p className="text-xs font-bold" style={{ color: idText }}>
-          Pedido #{pedido.id}
+          Pedido #{pedido.order_number ?? pedido.id}
         </p>
 
         <div className="pt-2 space-y-1 text-sm font-bold">

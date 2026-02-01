@@ -25,12 +25,23 @@ export const criarLoja = async (data) => {
       slug: data.slug,
       active: data.active ?? data.ativo ?? true,
     };
-    const { data: result, error } = await supabase.from('stores').insert(payload).select().single();
+    const { data: storeId, error } = await supabase.rpc('create_store', {
+      p_name: payload.name,
+      p_slug: payload.slug,
+    });
     if (error) throw error;
+    if (payload.active === false) {
+      const { error: toggleError } = await supabase.rpc('toggle_store_active', {
+        p_store_id: storeId,
+        p_active: false,
+      });
+      if (toggleError) throw toggleError;
+    }
     return {
-      ...result,
-      nome: result.name,
-      ativo: result.active,
+      id: storeId,
+      nome: payload.name,
+      slug: payload.slug,
+      ativo: payload.active,
     };
   } catch (error) {
     handleApiError(error, 'criar loja');
@@ -44,17 +55,25 @@ export const atualizarLoja = async (id, data) => {
       slug: data.slug,
       active: data.active ?? data.ativo,
     };
-    const { data: result, error } = await supabase
-      .from('stores')
-      .update(payload)
-      .eq('id', id)
-      .select()
-      .single();
+    const { error } = await supabase.rpc('update_store', {
+      p_store_id: id,
+      p_name: payload.name,
+      p_slug: payload.slug,
+    });
     if (error) throw error;
+
+    if (payload.active !== undefined) {
+      const { error: toggleError } = await supabase.rpc('toggle_store_active', {
+        p_store_id: id,
+        p_active: payload.active,
+      });
+      if (toggleError) throw toggleError;
+    }
     return {
-      ...result,
-      nome: result.name,
-      ativo: result.active,
+      id,
+      nome: payload.name,
+      slug: payload.slug,
+      ativo: payload.active,
     };
   } catch (error) {
     handleApiError(error, 'atualizar loja');
@@ -89,9 +108,12 @@ export const listarUsuariosLojas = async () => {
   }
 };
 
-export const removerUsuarioLoja = async (id) => {
+export const removerUsuarioLoja = async ({ user_id, store_id }) => {
   try {
-    const { error } = await supabase.from('user_store_access').delete().eq('id', id);
+    const { error } = await supabase.rpc('revoke_user_store_access', {
+      p_user_id: user_id,
+      p_store_id: store_id,
+    });
     if (error) throw error;
     return true;
   } catch (error) {

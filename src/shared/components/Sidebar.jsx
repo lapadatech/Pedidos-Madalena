@@ -28,14 +28,14 @@ function Sidebar({ collapsed, setCollapsed }) {
       label: 'Dashboard',
       modulo: 'dashboard',
     },
-    { path: `${basePath}/pedidos`, icon: ShoppingCart, label: 'Pedidos', modulo: 'pedidos' },
-    { path: `${basePath}/clientes`, icon: Users, label: 'Clientes', modulo: 'clientes' },
-    { path: `${basePath}/produtos`, icon: Package, label: 'Produtos', modulo: 'produtos' },
+    { path: `${basePath}/pedidos`, icon: ShoppingCart, label: 'Pedidos', modulo: 'orders' },
+    { path: `${basePath}/clientes`, icon: Users, label: 'Clientes', modulo: 'customers' },
+    { path: `${basePath}/produtos`, icon: Package, label: 'Produtos', modulo: 'products' },
     {
       path: `${basePath}/configuracoes`,
       icon: Settings,
       label: 'Configuracoes',
-      modulo: 'configuracoes',
+      modulo: 'settings',
     },
   ];
 
@@ -44,7 +44,7 @@ function Sidebar({ collapsed, setCollapsed }) {
   const visibleItems = loading
     ? []
     : menuItems.filter((item) => {
-        return temPermissao(item.modulo, 'visualizar');
+        return temPermissao(item.modulo, 'read');
       });
 
   return (

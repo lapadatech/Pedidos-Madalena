@@ -6,30 +6,110 @@ const AuthContext = createContext(undefined);
 
 const ROLE_PERMISSIONS = {
   gerente: {
-    pedidos: '*',
-    clientes: '*',
-    produtos: '*',
-    configuracoes: '*',
+    dashboard: { read: true },
+    orders: { read: true, create: true, update: true, delete: true, print: true, status: true },
+    customers: { read: true, create: true, update: true, delete: true },
+    products: { read: true, create: true, update: true, delete: true },
+    settings: { read: true, update: true },
   },
   atendente: {
-    pedidos: '*',
-    clientes: { visualizar: true, editar: true },
-    produtos: { visualizar: true },
+    dashboard: { read: true },
+    orders: {
+      read: true,
+      create: true,
+      update: true,
+      delete: false,
+      print: false,
+      status: true,
+    },
+    customers: { read: true, create: true, update: true, delete: false },
+    products: { read: true, create: false, update: false, delete: false },
+    settings: { read: false, update: false },
   },
-  admin: {
-    pedidos: '*',
-    clientes: '*',
-    produtos: '*',
-    configuracoes: '*',
-  },
+};
+
+const MODULE_ALIASES = {
+  pedidos: 'orders',
+  clientes: 'customers',
+  produtos: 'products',
+  configuracoes: 'settings',
+};
+
+const normalizePermissoes = (raw = {}) => {
+  const normalized = {};
+
+  Object.entries(raw || {}).forEach(([modulo, value]) => {
+    const mappedModule = MODULE_ALIASES[modulo] || modulo;
+    if (value === '*') {
+      normalized[mappedModule] = {
+        read: true,
+        create: true,
+        update: true,
+        delete: true,
+        print: true,
+        status: true,
+      };
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      const has = (acao) => value.includes(acao) || value.includes('*');
+      normalized[mappedModule] = {
+        read: has('read') || has('visualizar'),
+        create: has('create') || has('criar') || has('editar'),
+        update: has('update') || has('editar'),
+        delete: has('delete') || has('gerenciar'),
+        print: has('print') || has('imprimir'),
+        status: has('status'),
+      };
+      return;
+    }
+
+    if (value && typeof value === 'object') {
+      const hasLegacy =
+        'visualizar' in value || 'editar' in value || 'gerenciar' in value || 'excluir' in value;
+      if (hasLegacy) {
+        const visualizar = !!value.visualizar || !!value.editar || !!value.gerenciar;
+        const editar = !!value.editar || !!value.gerenciar;
+        const gerenciar = !!value.gerenciar || !!value.excluir;
+        normalized[mappedModule] = {
+          read: visualizar,
+          create: editar,
+          update: editar,
+          delete: gerenciar,
+          print: visualizar,
+          status: editar,
+        };
+        return;
+      }
+
+      normalized[mappedModule] = {
+        read: !!value.read,
+        create: !!value.create,
+        update: !!value.update,
+        delete: !!value.delete,
+        print: !!value.print,
+        status: !!value.status,
+      };
+      return;
+    }
+
+    normalized[mappedModule] = {
+      read: false,
+      create: false,
+      update: false,
+      delete: false,
+      print: false,
+      status: false,
+    };
+  });
+
+  return normalized;
 };
 
 const buildPerfil = (role) => {
   if (!role) return { nome: 'Atendente', permissoes: ROLE_PERMISSIONS.atendente };
   const normalized = role.toLowerCase();
-  if (normalized === 'administrador' || normalized === 'admin') {
-    return { nome: 'Admin', permissoes: ROLE_PERMISSIONS.admin };
-  }
   if (ROLE_PERMISSIONS[normalized]) {
     const nome = normalized.charAt(0).toUpperCase() + normalized.slice(1);
     return { nome, permissoes: ROLE_PERMISSIONS[normalized] };
@@ -169,10 +249,11 @@ export const SupabaseAuthProvider = ({ children }) => {
       }
 
       const perfil = lojaEncontrada.perfil || buildPerfil(lojaEncontrada.role);
+      const permissoesNormalizadas = normalizePermissoes(perfil?.permissoes || {});
 
       setLojaAtual(lojaEncontrada);
       setPerfilAtual(perfil);
-      setPermissoes(perfil?.permissoes || {});
+      setPermissoes(permissoesNormalizadas);
       return true;
     },
     [lojas, isAdmin]
@@ -182,25 +263,25 @@ export const SupabaseAuthProvider = ({ children }) => {
     (modulo, acao) => {
       if (loading || !usuario) return false;
 
-      if (isAdmin) return true;
+      if (isAdmin) return false;
 
-      if (!permissoes || !permissoes[modulo]) return false;
+      const moduloNormalizado = MODULE_ALIASES[modulo] || modulo;
+      if (!permissoes || !permissoes[moduloNormalizado]) return false;
 
-      const permissoesModulo = permissoes[modulo];
+      const permissoesModulo = permissoes[moduloNormalizado];
 
       if (Array.isArray(permissoesModulo)) {
         return permissoesModulo.includes(acao) || permissoesModulo.includes('*');
       }
 
       if (typeof permissoesModulo === 'object') {
-        if (acao === 'visualizar')
-          return (
-            !!permissoesModulo.visualizar ||
-            !!permissoesModulo.editar ||
-            !!permissoesModulo.gerenciar
-          );
-        if (acao === 'editar') return !!permissoesModulo.editar || !!permissoesModulo.gerenciar;
-        return !!permissoesModulo[acao];
+        if (acao === 'read') return !!permissoesModulo.read;
+        if (acao === 'create') return !!permissoesModulo.create;
+        if (acao === 'update') return !!permissoesModulo.update;
+        if (acao === 'delete') return !!permissoesModulo.delete;
+        if (acao === 'print') return !!permissoesModulo.print;
+        if (acao === 'status') return !!permissoesModulo.status;
+        return false;
       }
 
       return permissoesModulo === '*' || permissoesModulo === acao;

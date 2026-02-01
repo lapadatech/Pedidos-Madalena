@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
@@ -19,50 +19,56 @@ function Login() {
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(' ');
 
-  const [storeName, setStoreName] = useState(formatSlugToName(useParams().slug || ''));
+  const { storeSlug } = useParams();
+  const [storeName, setStoreName] = useState(formatSlugToName(storeSlug || ''));
   const [loadingStore, setLoadingStore] = useState(false);
+  const [storeSlugValido, setStoreSlugValido] = useState(true);
+  const [storeErro, setStoreErro] = useState('');
   const [carregando, setCarregando] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { slug } = useParams();
 
   const baseTitle = useMemo(
-    () => (slug ? `Login ${slug} - Gestor de Pedidos` : 'Login - Gestor de Pedidos'),
-    [slug]
+    () => (storeSlug ? `Login ${storeSlug} - Gestor de Pedidos` : 'Login - Gestor de Pedidos'),
+    [storeSlug]
   );
 
   useEffect(() => {
     const fetchStoreName = async () => {
-      if (!slug) return;
+      if (!storeSlug) return;
       try {
         setLoadingStore(true);
-        const { data, error } = await supabase
-          .from('stores')
-          .select('name')
-          .eq('slug', slug)
-          .limit(1)
-          .maybeSingle();
+        setStoreSlugValido(true);
+        setStoreErro('');
+        const { data, error } = await supabase.rpc('get_store_by_slug', { p_slug: storeSlug });
         if (error) {
           console.error('Erro ao buscar loja:', error.message);
-          setStoreName((prev) => prev || formatSlugToName(slug));
+          setStoreName((prev) => prev || formatSlugToName(storeSlug));
+          setStoreSlugValido(true);
           return;
         }
-        if (data?.name) {
-          setStoreName(data.name);
-        } else {
-          setStoreName(formatSlugToName(slug));
+        const storeData = Array.isArray(data) ? data[0] : data;
+        const lojaAtiva = storeData?.active !== false;
+        if (storeData && lojaAtiva) {
+          setStoreName(storeData.name || formatSlugToName(storeSlug));
+          setStoreSlugValido(true);
+          setStoreErro('');
+          return;
         }
+        setStoreSlugValido(false);
+        setStoreErro('Não existe loja cadastrada com esse slug.');
       } finally {
         setLoadingStore(false);
       }
     };
 
     fetchStoreName();
-  }, [slug]);
+  }, [storeSlug]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (storeSlug && !storeSlugValido) return;
     setCarregando(true);
     const { error } = await signIn(email, senha);
 
@@ -72,8 +78,8 @@ function Login() {
         description: 'Bem-vindo ao sistema.',
         className: 'bg-white text-black font-bold',
       });
-      if (slug) {
-        navigate(`/${slug}/dashboard`);
+      if (storeSlug) {
+        navigate(`/${storeSlug}/dashboard`);
       } else {
         navigate('/lojas');
       }
@@ -107,70 +113,83 @@ function Login() {
           className="w-full max-w-md"
         >
           <div className="bg-white rounded-lg shadow-xl p-8">
-            <div className="text-center mb-8 flex flex-col items-center gap-2">
-              <img
-                src="https://horizons-cdn.hostinger.com/e36d36b8-0bd5-4763-9879-98322153d8ad/0e924da8366373d07b6cb40d5e5f3b9a.png"
-                alt="Madalena Brigadeiros"
-                className="h-16"
-              />
-              {slug ? (
-                <p className="text-base font-semibold text-gray-600">
-                  {loadingStore ? 'Carregando loja...' : storeName || formatSlugToName(slug)}
-                </p>
-              ) : (
-                <p className="text-base font-semibold text-gray-600">Painel Administrativo</p>
-              )}
-            </div>
-
-            {carregando ? (
-              <div className="space-y-6 animate-pulse">
-                <div className="space-y-2">
-                  <div className="h-4 w-16 bg-gray-200 rounded"></div>
-                  <div className="h-10 w-full bg-gray-200 rounded"></div>
-                </div>
-                <div className="space-y-2">
-                  <div className="h-4 w-16 bg-gray-200 rounded"></div>
-                  <div className="h-10 w-full bg-gray-200 rounded"></div>
-                </div>
-                <div className="h-10 w-full bg-gray-200 rounded"></div>
+            {!loadingStore && storeSlug && !storeSlugValido ? (
+              <div className="text-center space-y-4">
+                <img
+                  src="https://horizons-cdn.hostinger.com/e36d36b8-0bd5-4763-9879-98322153d8ad/0e924da8366373d07b6cb40d5e5f3b9a.png"
+                  alt="Madalena Brigadeiros"
+                  className="h-16 mx-auto"
+                />
+                <p className="text-sm text-gray-600">{storeErro}</p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="********"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
+              <>
+                <div className="text-center mb-8 flex flex-col items-center gap-2">
+                  <img
+                    src="https://horizons-cdn.hostinger.com/e36d36b8-0bd5-4763-9879-98322153d8ad/0e924da8366373d07b6cb40d5e5f3b9a.png"
+                    alt="Madalena Brigadeiros"
+                    className="h-16"
                   />
+                  {storeSlug ? (
+                    <p className="text-base font-semibold text-gray-600">
+                      {loadingStore ? 'Carregando loja...' : storeName || formatSlugToName(storeSlug)}
+                    </p>
+                  ) : (
+                    <p className="text-base font-semibold text-gray-600">Painel Administrativo</p>
+                  )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="senha">Senha</Label>
-                  <Input
-                    id="senha"
-                    type="password"
-                    placeholder="********"
-                    value={senha}
-                    onChange={(e) => setSenha(e.target.value)}
-                    required
-                  />
-                </div>
+                {carregando ? (
+                  <div className="space-y-6 animate-pulse">
+                    <div className="space-y-2">
+                      <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                      <div className="h-10 w-full bg-gray-200 rounded"></div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                      <div className="h-10 w-full bg-gray-200 rounded"></div>
+                    </div>
+                    <div className="h-10 w-full bg-gray-200 rounded"></div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="********"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
 
-                <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600">
-                  Entrar
-                </Button>
-              </form>
+                    <div className="space-y-2">
+                      <Label htmlFor="senha">Senha</Label>
+                      <Input
+                        id="senha"
+                        type="password"
+                        placeholder="********"
+                        value={senha}
+                        onChange={(e) => setSenha(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600">
+                      Entrar
+                    </Button>
+                  </form>
+                )}
+
+                <div className="mt-6 text-center text-sm text-gray-500">
+                  <p />
+                  <p />
+                  <p />
+                </div>
+              </>
             )}
-
-            <div className="mt-6 text-center text-sm text-gray-500">
-              <p />
-              <p />
-              <p />
-            </div>
           </div>
         </motion.div>
       </div>

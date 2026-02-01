@@ -14,6 +14,7 @@ import {
 import { useToast } from '@/shared/ui/use-toast';
 import { listarTags, criarTag, atualizarTag, deletarTag } from '@/features/tags/services/tagsApi';
 import TagChip from '@/shared/components/tags/TagChip';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 function ConfigTags() {
   const [tags, setTags] = useState([]);
@@ -22,6 +23,8 @@ function ConfigTags() {
   const [nome, setNome] = useState('');
   const [cor, setCor] = useState('#FF9921');
   const { toast } = useToast();
+  const { temPermissao } = useAuth();
+  const podeEditar = temPermissao('settings', 'update');
 
   const carregarTags = useCallback(async () => {
     try {
@@ -125,7 +128,12 @@ function ConfigTags() {
           }}
         >
           <DialogTrigger asChild>
-            <Button size="sm" className="bg-orange-500 hover:bg-orange-600">
+            <Button
+              size="sm"
+              className="bg-orange-500 hover:bg-orange-600"
+              disabled={!podeEditar}
+              title={podeEditar ? '' : 'Sem permissao para editar tags'}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Nova Tag
             </Button>
@@ -204,14 +212,16 @@ function ConfigTags() {
             className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
           >
             <TagChip nome={tag.nome} cor={tag.cor} />
-            <div className="flex gap-2">
-              <Button variant="ghost" size="icon" onClick={() => handleEditar(tag)}>
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => handleDeletar(tag.id)}>
-                <Trash2 className="h-4 w-4 text-red-500" />
-              </Button>
-            </div>
+            {podeEditar && (
+              <div className="flex gap-2">
+                <Button variant="ghost" size="icon" onClick={() => handleEditar(tag)}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => handleDeletar(tag.id)}>
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                </Button>
+              </div>
+            )}
           </div>
         ))}
         {tags.length === 0 && (

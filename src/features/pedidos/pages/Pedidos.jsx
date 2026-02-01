@@ -289,7 +289,7 @@ function Pedidos() {
       });
 
       const dataToExport = allPedidos.map((p) => ({
-        'Nº Pedido': p.id,
+        'Nº Pedido': p.order_number ?? p.id,
         Cliente: p.cliente_nome,
         Data: p.data_entrega
           ? new Date(p.data_entrega + 'T00:00:00').toLocaleDateString('pt-BR')
@@ -319,7 +319,7 @@ function Pedidos() {
     }
   };
 
-  const podeCriar = temPermissao('pedidos', 'editar');
+  const podeCriar = temPermissao('orders', 'create');
 
   return (
     <>

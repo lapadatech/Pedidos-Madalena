@@ -13,6 +13,7 @@ import {
   atualizarGrupoComplemento,
   deletarGrupoComplemento,
 } from '@/features/produtos/services/produtosApi';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 const formatCurrency = (value) => {
   if (typeof value !== 'number') return 'R$ 0,00';
@@ -30,6 +31,10 @@ function ConfigComplementos() {
     opcoes: [{ nome: '', preco_adicional: 0 }],
   });
   const { toast } = useToast();
+  const { temPermissao } = useAuth();
+  const podeCriar = temPermissao('products', 'create');
+  const podeEditar = temPermissao('products', 'update');
+  const podeExcluir = temPermissao('products', 'delete');
 
   const carregarGrupos = useCallback(async () => {
     try {
@@ -135,7 +140,13 @@ function ConfigComplementos() {
     <div className="bg-white rounded-lg shadow">
       <div className="p-4 border-b flex items-center justify-between">
         <h3 className="font-semibold">Grupos de Complementos</h3>
-        <Button size="sm" className="bg-orange-500 hover:bg-orange-600" onClick={handleNovo}>
+        <Button
+          size="sm"
+          className="bg-orange-500 hover:bg-orange-600"
+          onClick={handleNovo}
+          disabled={!podeCriar}
+          title={podeCriar ? '' : 'Sem permissao para criar grupos'}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Novo Grupo
         </Button>
@@ -265,14 +276,20 @@ function ConfigComplementos() {
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right text-sm">
-                  <div className="flex items-center justify-end gap-2">
-                    <Button variant="ghost" size="icon" onClick={() => handleEditar(grupo)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDeletar(grupo.id)}>
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </div>
+                  {(podeEditar || podeExcluir) && (
+                    <div className="flex items-center justify-end gap-2">
+                      {podeEditar && (
+                        <Button variant="ghost" size="icon" onClick={() => handleEditar(grupo)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {podeExcluir && (
+                        <Button variant="ghost" size="icon" onClick={() => handleDeletar(grupo.id)}>
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

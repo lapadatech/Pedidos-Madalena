@@ -12,7 +12,6 @@ import {
   listarGruposComplementosComOpcoes,
 } from '@/features/produtos/services/produtosApi';
 import { criarPedido, atualizarPedidoCompleto } from '@/features/pedidos/services/pedidosApi';
-import { vincularTagsPedido } from '@/features/tags/services/tagsApi';
 import TagSelector from '@/shared/components/tags/TagSelector';
 
 function CriarPedidoStep3({ onVoltar, onFinalizar, dadosIniciais, editMode }) {
@@ -51,7 +50,7 @@ function CriarPedidoStep3({ onVoltar, onFinalizar, dadosIniciais, editMode }) {
       setLoadingProdutos(true);
       try {
         const [produtosData, gruposData] = await Promise.all([
-          listarProdutos({ ativo: true }),
+          listarProdutos({ status: 'ativo' }),
           listarGruposComplementosComOpcoes(),
         ]);
 
@@ -191,27 +190,22 @@ function CriarPedidoStep3({ onVoltar, onFinalizar, dadosIniciais, editMode }) {
       const pedidoParaSalvar = {
         ...dadosIniciais,
         store_id: lojaAtual.id,
-        subtotal,
         desconto: descontoFloat,
         frete: freteFloat,
-        total,
         observacao_geral: observacaoGeral,
         status_pagamento: statusPagamento,
         status_entrega: statusEntrega,
         criado_por: editMode ? dadosIniciais.criado_por : usuario?.nome || '—',
         itens: itens.map(({ id, produto_nome, valor_total, ...item }) => item),
+        tag_ids: selectedTagIds,
       };
 
       let pedidoResultante;
       if (editMode) {
         pedidoResultante = await atualizarPedidoCompleto(dadosIniciais.id, pedidoParaSalvar);
-        // Atualizar tags do pedido
-        await vincularTagsPedido(dadosIniciais.id, selectedTagIds);
         toast({ title: 'Pedido atualizado com sucesso!' });
       } else {
         pedidoResultante = await criarPedido(pedidoParaSalvar);
-        // Vincular tags ao novo pedido
-        await vincularTagsPedido(pedidoResultante.id, selectedTagIds);
         toast({ title: 'Pedido criado com sucesso!' });
       }
       onFinalizar(pedidoResultante);

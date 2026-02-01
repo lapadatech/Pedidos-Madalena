@@ -279,7 +279,7 @@ const imprimirPedido = (pedido, toast) => {
   printWindow.document.write(`
       <html>
         <head>
-          <title>Pedido #${pedido.id}</title>
+          <title>Pedido #${pedido.order_number ?? pedido.id}</title>
           ${printStyles}
         </head>
         <body>
@@ -298,7 +298,7 @@ const imprimirPedido = (pedido, toast) => {
 
 function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, onPedidoDeletado }) {
   const { toast } = useToast();
-  const { temPermissao } = useAuth();
+  const { temPermissao, lojaAtual } = useAuth();
   const printableAreaRef = useRef(null);
 
   const [pedido, setPedido] = useState(null);
@@ -315,7 +315,7 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
     if (!pedidoId) return;
     setLoading(true);
     try {
-      const dados = await obterPedidoCompleto(pedidoId);
+      const dados = await obterPedidoCompleto(pedidoId, lojaAtual?.id);
       setPedido(dados);
       setStatusPagamento(dados.status_pagamento || 'Não Pago');
       setStatusEntrega(dados.status_entrega || 'Não Entregue');
@@ -329,7 +329,7 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
     } finally {
       setLoading(false);
     }
-  }, [pedidoId, toast, onOpenChange]);
+  }, [pedidoId, toast, onOpenChange, lojaAtual?.id]);
 
   useEffect(() => {
     if (open) {
@@ -371,8 +371,10 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
     }
   };
 
-  const podeEditar = temPermissao('pedidos', 'editar');
-  const podeExcluir = temPermissao('pedidos', 'gerenciar');
+  const podeEditar = temPermissao('orders', 'update');
+  const podeExcluir = temPermissao('orders', 'delete');
+  const podeStatus = temPermissao('orders', 'status');
+  const podeImprimir = temPermissao('orders', 'print');
 
   const handleEditarClick = () => {
     if (!pedido) return;
@@ -387,6 +389,14 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
     if (!pedido) return;
 
     const { cliente, itens, endereco_entrega } = pedido;
+    const lojaNome = lojaAtual?.nome || 'nossa loja';
+    const lojaSlug = (lojaAtual?.slug || '').toLowerCase();
+    const enderecoRetirada = lojaSlug.includes('boqueirao')
+      ? 'Rua Machado de Assis, 316'
+      : lojaSlug.includes('ponta-da-praia')
+        ? 'Rua Guaibe, 13'
+        : '';
+
     const dataEntregaFormatada = new Date(pedido.data_entrega + 'T00:00:00').toLocaleDateString(
       'pt-BR'
     );
@@ -413,7 +423,8 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
       message += `*Endereço de Entrega:*\n`;
       message += `${formatarEndereco(endereco_entrega)}, ${endereco_entrega.cidade} - ${endereco_entrega.estado}, ${endereco_entrega.cep}\n\n`;
     } else {
-      message += `*Tipo de Entrega:* Retirada\n\n`;
+      const infoLoja = enderecoRetirada ? `${lojaNome} - ${enderecoRetirada}` : lojaNome;
+      message += `*Tipo de Entrega:* Retirada na loja ${infoLoja}\n\n`;
     }
 
     message += `*Valores:*\n`;
@@ -575,7 +586,7 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
             </div>
           </div>
 
-          {podeEditar && (
+          {podeStatus && (
             <div className="mt-8 border-t pt-6 space-y-4">
               <h4 className="font-semibold text-gray-700">Atualizar Status</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -609,9 +620,11 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
 
           <div className="flex justify-between items-center gap-4 pt-8 mt-4 border-t">
             <div className="flex gap-2 flex-wrap">
-              <Button variant="outline" onClick={handleImprimir} className="flex-1 sm:flex-none">
-                <Printer className="h-4 w-4 mr-2" /> Imprimir
-              </Button>
+              {podeImprimir && (
+                <Button variant="outline" onClick={handleImprimir} className="flex-1 sm:flex-none">
+                  <Printer className="h-4 w-4 mr-2" /> Imprimir
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={handleCopiarMensagem}
@@ -639,7 +652,7 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
                 </Button>
               )}
             </div>
-            {podeEditar && (
+            {podeStatus && (
               <Button
                 onClick={handleSalvarStatus}
                 disabled={saving}
@@ -656,8 +669,8 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
             <AlertDialogHeader>
               <AlertDialogTitle>Tem certeza que deseja excluir este pedido?</AlertDialogTitle>
               <AlertDialogDescription>
-                Essa ação não pode ser desfeita. O pedido #{pedidoId} será permanentemente removido
-                do sistema.
+                Essa ação não pode ser desfeita. O pedido #{pedido?.order_number ?? pedidoId} será
+                permanentemente removido do sistema.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -679,7 +692,10 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
   return (
     <>
       <Helmet>
-        <title>{loading ? 'Carregando...' : `Pedido #${pedido?.id}`} - Gestor de Pedidos</title>
+        <title>
+          {loading ? 'Carregando...' : `Pedido #${pedido?.order_number ?? pedido?.id}`} - Gestor de
+          Pedidos
+        </title>
       </Helmet>
       <Dialog
         open={open}
@@ -690,7 +706,7 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              Detalhes do Pedido #{pedidoId}
+              Detalhes do Pedido #{pedido?.order_number ?? pedidoId}
               {pedido?.created_at && (
                 <span className="block text-sm font-normal text-gray-500">
                   Criado em {formatarDataHora(pedido.created_at)}

@@ -10,6 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/shared/ui/dialog';
+import { Switch } from '@/shared/ui/switch';
 import { useToast } from '@/shared/ui/use-toast';
 import {
   listarCategorias,
@@ -17,17 +18,23 @@ import {
   atualizarCategoria,
   deletarCategoria,
 } from '@/features/produtos/services/produtosApi';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 function ConfigCategorias() {
   const [categorias, setCategorias] = useState([]);
   const [dialogAberto, setDialogAberto] = useState(false);
   const [categoriaSelecionada, setCategoriaSelecionada] = useState(null);
   const [nome, setNome] = useState('');
+  const [ativa, setAtiva] = useState(true);
   const { toast } = useToast();
+  const { temPermissao } = useAuth();
+  const podeCriar = temPermissao('settings', 'update');
+  const podeEditar = temPermissao('settings', 'update');
+  const podeExcluir = temPermissao('settings', 'update');
 
   const carregarCategorias = useCallback(async () => {
     try {
-      const dados = await listarCategorias();
+      const dados = await listarCategorias({ includeInactive: true });
       setCategorias(dados);
     } catch (error) {
       toast({
@@ -47,13 +54,13 @@ function ConfigCategorias() {
 
     try {
       if (categoriaSelecionada) {
-        await atualizarCategoria(categoriaSelecionada.id, { nome });
+        await atualizarCategoria(categoriaSelecionada.id, { nome, active: ativa });
         toast({
           title: 'Categoria atualizada!',
           className: 'bg-white text-black font-bold',
         });
       } else {
-        await criarCategoria({ nome });
+        await criarCategoria({ nome, active: ativa });
         toast({
           title: 'Categoria criada!',
           className: 'bg-white text-black font-bold',
@@ -63,6 +70,7 @@ function ConfigCategorias() {
       await carregarCategorias();
       setDialogAberto(false);
       setNome('');
+      setAtiva(true);
       setCategoriaSelecionada(null);
     } catch (error) {
       toast({
@@ -76,7 +84,22 @@ function ConfigCategorias() {
   const handleEditar = (categoria) => {
     setCategoriaSelecionada(categoria);
     setNome(categoria.nome);
+    setAtiva(categoria.active !== false);
     setDialogAberto(true);
+  };
+
+  const handleToggleAtivo = async (categoria) => {
+    if (!podeEditar) return;
+    try {
+      await atualizarCategoria(categoria.id, { active: categoria.active ? false : true });
+      await carregarCategorias();
+    } catch (error) {
+      toast({
+        title: 'Erro ao atualizar categoria',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleDeletar = async (id) => {
@@ -108,12 +131,18 @@ function ConfigCategorias() {
             setDialogAberto(open);
             if (!open) {
               setNome('');
+              setAtiva(true);
               setCategoriaSelecionada(null);
             }
           }}
         >
           <DialogTrigger asChild>
-            <Button size="sm" className="bg-orange-500 hover:bg-orange-600">
+            <Button
+              size="sm"
+              className="bg-orange-500 hover:bg-orange-600"
+              disabled={!podeCriar}
+              title={podeCriar ? '' : 'Sem permissao para criar categorias'}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Nova Categoria
             </Button>
@@ -133,6 +162,12 @@ function ConfigCategorias() {
                   onChange={(e) => setNome(e.target.value)}
                   required
                 />
+              </div>
+              <div className="flex items-center justify-between border rounded-md px-3 py-2">
+                <Label htmlFor="categoria-ativa" className="text-sm">
+                  Categoria ativa
+                </Label>
+                <Switch id="categoria-ativa" checked={ativa} onCheckedChange={setAtiva} />
               </div>
               <div className="flex gap-2 pt-4">
                 <Button
@@ -158,15 +193,34 @@ function ConfigCategorias() {
             key={categoria.id}
             className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
           >
-            <span className="font-medium">{categoria.nome}</span>
-            <div className="flex gap-2">
-              <Button variant="ghost" size="icon" onClick={() => handleEditar(categoria)}>
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => handleDeletar(categoria.id)}>
-                <Trash2 className="h-4 w-4 text-red-500" />
-              </Button>
+            <div className="flex items-center gap-3">
+              <span className="font-medium">{categoria.nome}</span>
+              <span className="text-xs text-gray-500">
+                {categoria.active ? 'Ativa' : 'Inativa'}
+              </span>
             </div>
+            {(podeEditar || podeExcluir) && (
+              <div className="flex gap-2">
+                {podeEditar && (
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={categoria.active !== false}
+                      onCheckedChange={() => handleToggleAtivo(categoria)}
+                    />
+                  </div>
+                )}
+                {podeEditar && (
+                  <Button variant="ghost" size="icon" onClick={() => handleEditar(categoria)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                )}
+                {podeExcluir && (
+                  <Button variant="ghost" size="icon" onClick={() => handleDeletar(categoria.id)}>
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         ))}
         {categorias.length === 0 && (

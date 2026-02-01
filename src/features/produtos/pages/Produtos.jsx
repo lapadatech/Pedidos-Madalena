@@ -55,7 +55,7 @@ function Produtos() {
   const [gruposComplementos, setGruposComplementos] = useState([]);
   const [busca, setBusca] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('all');
-  const [filtroStatus, setFiltroStatus] = useState('all');
+  const [filtroStatus, setFiltroStatus] = useState('ativo');
   const [dialogAberto, setDialogAberto] = useState(false);
   const [produtoSelecionado, setProdutoSelecionado] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -75,7 +75,7 @@ function Produtos() {
     setLoading(true);
     try {
       const [produtosResponse, categoriasData, gruposData] = await Promise.all([
-        listarProdutos(),
+        listarProdutos({ status: 'all' }),
         listarCategorias(),
         listarGruposComplementos(),
       ]);
@@ -208,11 +208,17 @@ function Produtos() {
     const matchNome = p.nome.toLowerCase().includes(busca.toLowerCase());
     const matchCategoria =
       filtroCategoria === 'all' || p.categoria_id?.toString() === filtroCategoria;
-    const matchStatus = filtroStatus === 'all' || (filtroStatus === 'ativo' ? p.ativo : !p.ativo);
+    const categoria = categorias.find((c) => c.id === p.categoria_id);
+    const categoriaAtiva = categoria ? categoria.active !== false : true;
+    const disponivel = p.ativo && categoriaAtiva;
+    const matchStatus =
+      filtroStatus === 'all' || (filtroStatus === 'ativo' ? disponivel : !disponivel);
     return matchNome && matchCategoria && matchStatus;
   });
 
-  const podeEditar = temPermissao('produtos', 'editar');
+  const podeCriar = temPermissao('products', 'create');
+  const podeEditar = temPermissao('products', 'update');
+  const podeExcluir = temPermissao('products', 'delete');
 
   return (
     <>
@@ -226,7 +232,7 @@ function Produtos() {
             <h2 className="text-3xl font-bold text-gray-900">Produtos</h2>
             <p className="text-gray-500 mt-1"></p>
           </div>
-          {podeEditar && (
+          {podeCriar && (
             <>
               <Button className="bg-orange-500 hover:bg-orange-600" onClick={handleNovo}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -298,6 +304,7 @@ function Produtos() {
                           {categorias.map((cat) => (
                             <SelectItem key={cat.id} value={cat.id.toString()}>
                               {cat.nome}
+                              {cat.active === false ? ' (inativa)' : ''}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -407,6 +414,7 @@ function Produtos() {
                   {categorias.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id.toString()}>
                       {cat.nome}
+                      {cat.active === false ? ' (inativa)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -429,6 +437,7 @@ function Produtos() {
               ? Array.from({ length: 6 }).map((_, index) => <SkeletonProdutoCard key={index} />)
               : produtosFiltrados.map((produto) => {
                   const categoria = categorias.find((c) => c.id === produto.categoria_id);
+                  const categoriaInativa = categoria ? categoria.active === false : false;
                   const complementosProduto = produto.grupos_complementos
                     ?.map((gc_id) => gruposComplementos.find((g) => g.id === gc_id)?.nome)
                     .filter(Boolean);
@@ -449,7 +458,9 @@ function Produtos() {
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1 pr-2">
                             <h3 className="font-semibold text-gray-900">{produto.nome}</h3>
-                            <p className="text-sm text-gray-500">{categoria?.nome}</p>
+                            <p className="text-sm text-gray-500">
+                              {categoria?.nome || 'Sem categoria'}
+                            </p>
                           </div>
                           <span
                             className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ${produto.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}
@@ -457,6 +468,13 @@ function Produtos() {
                             {produto.ativo ? 'Ativo' : 'Inativo'}
                           </span>
                         </div>
+                        {categoriaInativa && (
+                          <div className="mb-2">
+                            <span className="inline-flex items-center px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-700">
+                              Categoria inativa
+                            </span>
+                          </div>
+                        )}
                         {complementosProduto && complementosProduto.length > 0 && (
                           <div className="mb-3">
                             <p className="text-xs font-medium text-gray-600">Complementos:</p>
@@ -477,22 +495,26 @@ function Produtos() {
                         <span className="text-lg font-bold text-orange-600">
                           R$ {Number(produto.preco).toFixed(2).replace('.', ',')}
                         </span>
-                        {podeEditar && (
+                        {(podeEditar || podeExcluir) && (
                           <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditar(produto)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeletar(produto.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
+                            {podeEditar && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditar(produto)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {podeExcluir && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeletar(produto.id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            )}
                           </div>
                         )}
                       </div>

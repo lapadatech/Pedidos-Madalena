@@ -21,34 +21,91 @@ import {
 
 const modulosPermissao = [
   { id: 'dashboard', nome: 'Dashboard' },
-  { id: 'clientes', nome: 'Clientes' },
-  { id: 'produtos', nome: 'Produtos' },
-  { id: 'pedidos', nome: 'Pedidos' },
-  { id: 'configuracoes', nome: 'Configurações' },
+  { id: 'orders', nome: 'Pedidos' },
+  { id: 'customers', nome: 'Clientes' },
+  { id: 'products', nome: 'Produtos' },
+  { id: 'settings', nome: 'Configuracoes' },
 ];
 
-const acoesPermissao = [
-  { id: 'visualizar', nome: 'Visualizar' },
-  { id: 'editar', nome: 'Criar/Editar' },
-  { id: 'gerenciar', nome: 'Gerenciar' }, // Gerenciar inclui 'excluir'
+const acoesPermissaoBase = [
+  { id: 'read', nome: 'Ler' },
+  { id: 'create', nome: 'Criar' },
+  { id: 'update', nome: 'Editar' },
+  { id: 'delete', nome: 'Excluir' },
 ];
+
+const acoesExtrasPorModulo = {
+  orders: [
+    { id: 'status', nome: 'Status' },
+    { id: 'print', nome: 'Imprimir' },
+  ],
+};
+
+const MODULE_ALIASES = {
+  pedidos: 'orders',
+  clientes: 'customers',
+  produtos: 'products',
+  configuracoes: 'settings',
+};
 
 const normalizePermissoes = (raw = {}) => {
   const result = {};
   modulosPermissao.forEach((modulo) => {
-    const value = raw?.[modulo.id];
+    result[modulo.id] = {
+      read: false,
+      create: false,
+      update: false,
+      delete: false,
+      status: false,
+      print: false,
+    };
+  });
+
+  Object.entries(raw || {}).forEach(([modulo, value]) => {
+    const mappedModule = MODULE_ALIASES[modulo] || modulo;
+    if (!result[mappedModule]) return;
+
     if (value === '*') {
-      result[modulo.id] = { visualizar: true, editar: true, gerenciar: true };
-    } else if (value && typeof value === 'object') {
-      result[modulo.id] = {
-        visualizar: !!value.visualizar || !!value.editar || !!value.gerenciar,
-        editar: !!value.editar || !!value.gerenciar,
-        gerenciar: !!value.gerenciar,
+      result[mappedModule] = {
+        read: true,
+        create: true,
+        update: true,
+        delete: true,
+        status: true,
+        print: true,
       };
-    } else {
-      result[modulo.id] = { visualizar: false, editar: false, gerenciar: false };
+      return;
+    }
+
+    if (value && typeof value === 'object') {
+      const hasLegacy =
+        'visualizar' in value || 'editar' in value || 'gerenciar' in value || 'excluir' in value;
+      if (hasLegacy) {
+        const visualizar = !!value.visualizar || !!value.editar || !!value.gerenciar;
+        const editar = !!value.editar || !!value.gerenciar;
+        const gerenciar = !!value.gerenciar || !!value.excluir;
+        result[mappedModule] = {
+          read: visualizar,
+          create: editar,
+          update: editar,
+          delete: gerenciar,
+          status: editar,
+          print: visualizar,
+        };
+        return;
+      }
+
+      result[mappedModule] = {
+        read: !!value.read,
+        create: !!value.create,
+        update: !!value.update,
+        delete: !!value.delete,
+        status: !!value.status,
+        print: !!value.print,
+      };
     }
   });
+
   return result;
 };
 
@@ -57,15 +114,29 @@ const perfisFallback = [
   {
     id: 'gerente',
     nome: 'Gerente',
-    permissoes: { dashboard: '*', clientes: '*', produtos: '*', pedidos: '*', configuracoes: '*' },
+    permissoes: {
+      dashboard: { read: true },
+      orders: { read: true, create: true, update: true, delete: true, status: true, print: true },
+      customers: { read: true, create: true, update: true, delete: true },
+      products: { read: true, create: true, update: true, delete: true },
+      settings: { read: true, update: true },
+    },
   },
   {
     id: 'atendente',
     nome: 'Atendente',
     permissoes: {
-      pedidos: { visualizar: true, editar: true },
-      clientes: { visualizar: true, editar: true },
-      produtos: { visualizar: true },
+      dashboard: { read: true },
+      orders: {
+        read: true,
+        create: true,
+        update: true,
+        delete: false,
+        status: true,
+        print: false,
+      },
+      customers: { read: true, create: true, update: true, delete: false },
+      products: { read: true, create: false, update: false, delete: false },
     },
   },
 ];
@@ -113,23 +184,45 @@ function ConfigPerfis() {
     setFormData((prev) => {
       const newPermissoes = { ...prev.permissoes };
       if (!newPermissoes[modulo]) {
-        newPermissoes[modulo] = { visualizar: false, editar: false, gerenciar: false };
+        newPermissoes[modulo] = {
+          read: false,
+          create: false,
+          update: false,
+          delete: false,
+          status: false,
+          print: false,
+        };
       }
       newPermissoes[modulo][acao] = !!checked;
 
-      if (acao === 'gerenciar' && checked) {
-        newPermissoes[modulo].editar = true;
-        newPermissoes[modulo].visualizar = true;
+      if ((acao === 'status' || acao === 'print') && checked) {
+        newPermissoes[modulo].read = true;
       }
-      if (acao === 'editar' && checked) {
-        newPermissoes[modulo].visualizar = true;
+      if (acao === 'delete' && checked) {
+        newPermissoes[modulo].update = true;
+        newPermissoes[modulo].create = true;
+        newPermissoes[modulo].read = true;
       }
-      if (acao === 'visualizar' && !checked) {
-        newPermissoes[modulo].editar = false;
-        newPermissoes[modulo].gerenciar = false;
+      if (acao === 'update' && checked) {
+        newPermissoes[modulo].create = true;
+        newPermissoes[modulo].read = true;
       }
-      if (acao === 'editar' && !checked) {
-        newPermissoes[modulo].gerenciar = false;
+      if (acao === 'create' && checked) {
+        newPermissoes[modulo].read = true;
+      }
+      if (acao === 'read' && !checked) {
+        newPermissoes[modulo].create = false;
+        newPermissoes[modulo].update = false;
+        newPermissoes[modulo].delete = false;
+        newPermissoes[modulo].status = false;
+        newPermissoes[modulo].print = false;
+      }
+      if (acao === 'create' && !checked) {
+        newPermissoes[modulo].update = false;
+        newPermissoes[modulo].delete = false;
+      }
+      if (acao === 'update' && !checked) {
+        newPermissoes[modulo].delete = false;
       }
 
       return { ...prev, permissoes: newPermissoes };
@@ -188,15 +281,19 @@ function ConfigPerfis() {
   };
 
   const getPermissaoStatus = (permissoes, modulo) => {
-    if (!permissoes || !permissoes[modulo])
+    if (!permissoes || !permissoes[modulo]) {
       return { icon: ShieldOff, text: 'Sem acesso', color: 'text-gray-400' };
+    }
 
-    if (permissoes[modulo].gerenciar)
-      return { icon: ShieldCheck, text: 'Gerenciar', color: 'text-red-600' };
-    if (permissoes[modulo].editar)
+    if (permissoes[modulo].delete) {
+      return { icon: ShieldCheck, text: 'Excluir', color: 'text-red-600' };
+    }
+    if (permissoes[modulo].update) {
       return { icon: ShieldCheck, text: 'Editar', color: 'text-green-600' };
-    if (permissoes[modulo].visualizar)
-      return { icon: Shield, text: 'Visualizar', color: 'text-blue-500' };
+    }
+    if (permissoes[modulo].read) {
+      return { icon: Shield, text: 'Ler', color: 'text-blue-500' };
+    }
 
     return { icon: ShieldOff, text: 'Sem acesso', color: 'text-gray-400' };
   };
@@ -244,7 +341,10 @@ function ConfigPerfis() {
                     <div key={modulo.id}>
                       <p className="font-medium text-sm mb-2">{modulo.nome}</p>
                       <div className="flex items-center gap-6">
-                        {acoesPermissao.map((acao) => (
+                        {(acoesExtrasPorModulo[modulo.id]
+                          ? [...acoesPermissaoBase, ...acoesExtrasPorModulo[modulo.id]]
+                          : acoesPermissaoBase
+                        ).map((acao) => (
                           <div key={acao.id} className="flex items-center gap-2">
                             <Checkbox
                               id={`${modulo.id}-${acao.id}`}
@@ -253,10 +353,14 @@ function ConfigPerfis() {
                                 handlePermissaoChange(modulo.id, acao.id, checked)
                               }
                               disabled={
-                                (acao.id === 'visualizar' &&
-                                  (formData.permissoes[modulo.id]?.editar ||
-                                    formData.permissoes[modulo.id]?.gerenciar)) ||
-                                (acao.id === 'editar' && formData.permissoes[modulo.id]?.gerenciar)
+                                (acao.id === 'read' &&
+                                  (formData.permissoes[modulo.id]?.create ||
+                                    formData.permissoes[modulo.id]?.update ||
+                                    formData.permissoes[modulo.id]?.delete)) ||
+                                (acao.id === 'create' &&
+                                  (formData.permissoes[modulo.id]?.update ||
+                                    formData.permissoes[modulo.id]?.delete)) ||
+                                (acao.id === 'update' && formData.permissoes[modulo.id]?.delete)
                               }
                             />
                             <Label htmlFor={`${modulo.id}-${acao.id}`}>{acao.nome}</Label>
