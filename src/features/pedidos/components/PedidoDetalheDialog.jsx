@@ -396,11 +396,12 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
     );
     const horaEntregaFormatada = formatarHora(pedido.hora_entrega);
     const lojaNome = lojaAtual?.nome || 'nossa loja';
-    const lojaEnderecoPorNome = {
-      'Loja Boqueirao': 'Rua Guaibe, 13',
-      'Loja Ponta': 'Rua Machado de Assis, 316',
-    };
-    const lojaEndereco = lojaEnderecoPorNome[lojaNome] || '';
+    let lojaEndereco = '';
+    if (lojaNome === 'Boqueirão') {
+      lojaEndereco = ' - Rua Machado de Assis, 316 - CEP: 11050-060';
+    } else if (lojaNome === 'Ponta da Praia') {
+      lojaEndereco = ' - Rua Guaibe, 13 - CEP: 11035-191';
+    }
 
     let message = `*Confirmação de Pedido*\n\n`;
     message += `Olá ${cliente.nome || 'cliente'},\n`;
@@ -424,8 +425,8 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
       message += `*Endereço de Entrega:*\n`;
       message += `${formatarEndereco(endereco_entrega)}, ${endereco_entrega.cidade} - ${endereco_entrega.estado}, ${endereco_entrega.cep}\n\n`;
     } else {
-      message += `*Tipo de Entrega:* Retiradaerererrereerererreer\n`;
-      message += `*Retirada em:* ${lojaNome}\n`;
+      message += `*Tipo de Entrega:* Retirada\n`;
+      message += `*Retirada na loja:* ${lojaNome}`;
       if (lojaEndereco) {
         message += `${lojaEndereco}\n`;
       }
@@ -473,6 +474,7 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
     const cliente = pedido.cliente || {};
     const itens = Array.isArray(pedido.itens) ? pedido.itens : [];
     const endereco_entrega = pedido.endereco_entrega;
+    const tags = pedido.tags?.length ? pedido.tags : pedido._tags || [];
 
     return (
       <>

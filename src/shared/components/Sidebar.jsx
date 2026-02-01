@@ -57,7 +57,7 @@ function Sidebar({ collapsed, setCollapsed }) {
         {!collapsed && (
           <div className="flex flex-col items-center">
             <img
-              src="https://horizons-cdn.hostinger.com/e36d36b8-0bd5-4763-9879-98322153d8ad/0e924da8366373d07b6cb40d5e5f3b9a.png"
+              src="https://dhtbhnpdcfcwpofwrxhg.supabase.co/storage/v1/object/public/logo-sistema/LOGO%20LARANJA.png"
               alt="Madalena Brigadeiros Logo"
               className="h-20"
             />
