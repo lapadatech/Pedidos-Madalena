@@ -300,7 +300,7 @@ const imprimirPedido = (pedido, toast) => {
 
 function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, onPedidoDeletado }) {
   const { toast } = useToast();
-  const { temPermissao } = useAuth();
+  const { temPermissao, lojaAtual } = useAuth();
   const printableAreaRef = useRef(null);
 
   const [pedido, setPedido] = useState(null);
@@ -391,11 +391,16 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
     const cliente = pedido.cliente || {};
     const itens = Array.isArray(pedido.itens) ? pedido.itens : [];
     const endereco_entrega = pedido.endereco_entrega;
-    const tags = pedido.tags?.length ? pedido.tags : pedido._tags || [];
     const dataEntregaFormatada = new Date(pedido.data_entrega + 'T00:00:00').toLocaleDateString(
       'pt-BR'
     );
     const horaEntregaFormatada = formatarHora(pedido.hora_entrega);
+    const lojaNome = lojaAtual?.nome || 'nossa loja';
+    const lojaEnderecoPorNome = {
+      'Loja Boqueirao': 'Rua Guaibe, 13',
+      'Loja Ponta': 'Rua Machado de Assis, 316',
+    };
+    const lojaEndereco = lojaEnderecoPorNome[lojaNome] || '';
 
     let message = `*Confirmação de Pedido*\n\n`;
     message += `Olá ${cliente.nome || 'cliente'},\n`;
@@ -419,7 +424,12 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
       message += `*Endereço de Entrega:*\n`;
       message += `${formatarEndereco(endereco_entrega)}, ${endereco_entrega.cidade} - ${endereco_entrega.estado}, ${endereco_entrega.cep}\n\n`;
     } else {
-      message += `*Tipo de Entrega:* Retirada\n\n`;
+      message += `*Tipo de Entrega:* Retirada\n`;
+      message += `*Retirada em:* ${lojaNome}\n`;
+      if (lojaEndereco) {
+        message += `${lojaEndereco}\n`;
+      }
+      message += `\n`;
     }
 
     message += `*Valores:*\n`;
