@@ -59,7 +59,9 @@ const InfoLine = ({ label, value, className = '' }) => (
 const imprimirPedido = (pedido, toast) => {
   if (!pedido) return;
 
-  const { cliente, itens, endereco_entrega } = pedido;
+  const cliente = pedido.cliente || {};
+  const itens = Array.isArray(pedido.itens) ? pedido.itens : [];
+  const endereco_entrega = pedido.endereco_entrega;
 
   const criadoEmFormatado = pedido.created_at
     ? (() => {
@@ -76,8 +78,8 @@ const imprimirPedido = (pedido, toast) => {
 
   const clienteInfoHtml = `
         <div class="section">
-            <div><strong>Cliente:</strong> ${cliente.nome}</div>
-            <div><strong>Telefone:</strong> ${maskCelular(cliente.celular)}</div>
+            <div><strong>Cliente:</strong> ${cliente.nome || 'Cliente nao informado'}</div>
+            <div><strong>Telefone:</strong> ${maskCelular(cliente.celular) || '-'}</div>
         </div>
         <div class="separator"></div>
     `;
@@ -99,7 +101,7 @@ const imprimirPedido = (pedido, toast) => {
                 (item) => `
                 <div class="item">
                     <div class="produto">
-                        <span class="produto-quantidade">${item.quantidade}x</span> ${item.produtos.nome}
+                        <span class="produto-quantidade">${item.quantidade}x</span> ${item.produtos?.nome || 'Produto removido'}
                     </div>
                     <div class="valor-item">
                         R$ ${(item.valor_unitario * item.quantidade).toFixed(2).replace('.', ',')}
@@ -386,19 +388,23 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
   const handleCopiarMensagem = async () => {
     if (!pedido) return;
 
-    const { cliente, itens, endereco_entrega } = pedido;
+    const cliente = pedido.cliente || {};
+    const itens = Array.isArray(pedido.itens) ? pedido.itens : [];
+    const endereco_entrega = pedido.endereco_entrega;
+    const tags = pedido.tags?.length ? pedido.tags : pedido._tags || [];
     const dataEntregaFormatada = new Date(pedido.data_entrega + 'T00:00:00').toLocaleDateString(
       'pt-BR'
     );
     const horaEntregaFormatada = formatarHora(pedido.hora_entrega);
 
     let message = `*Confirmação de Pedido*\n\n`;
-    message += `Olá ${cliente.nome},\n`;
+    message += `Olá ${cliente.nome || 'cliente'},\n`;
     message += `Seu pedido está confirmado para o dia ${dataEntregaFormatada} às ${horaEntregaFormatada}.\n\n`;
 
     message += `*Itens do Pedido:*\n`;
     itens.forEach((item) => {
-      message += `- ${item.quantidade}x ${item.produtos.nome} (R$ ${(item.valor_unitario * item.quantidade).toFixed(2).replace('.', ',')})\n`;
+      const produtoNome = item.produtos?.nome || 'Produto removido';
+      message += `- ${item.quantidade}x ${produtoNome} (R$ ${(item.valor_unitario * item.quantidade).toFixed(2).replace('.', ',')})\n`;
       if (Array.isArray(item.complementos) && item.complementos.length > 0) {
         item.complementos.forEach((c) => {
           message += `  - ${c.grupo_nome}: ${c.nome} ${c.preco_adicional > 0 ? `(+R$ ${c.preco_adicional.toFixed(2).replace('.', ',')})` : ''}\n`;
@@ -454,7 +460,9 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
       return <div className="text-center py-10">Pedido não encontrado.</div>;
     }
 
-    const { cliente, itens, endereco_entrega } = pedido;
+    const cliente = pedido.cliente || {};
+    const itens = Array.isArray(pedido.itens) ? pedido.itens : [];
+    const endereco_entrega = pedido.endereco_entrega;
 
     return (
       <>
@@ -495,11 +503,11 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
             </div>
           </div>
 
-          {pedido.tags && pedido.tags.length > 0 && (
+          {tags.length > 0 && (
             <div className="mt-6 border rounded-lg p-4 bg-white">
               <h4 className="font-semibold text-gray-700 mb-3">Tags</h4>
               <div className="flex flex-wrap gap-2">
-                {pedido.tags.map((tag) => (
+                {tags.map((tag) => (
                   <TagChip key={tag.id} nome={tag.nome} cor={tag.cor} />
                 ))}
               </div>
@@ -513,7 +521,7 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
                 <div key={item.id} className="text-sm pb-2 border-b last:border-b-0">
                   <div className="flex justify-between font-medium">
                     <span>
-                      {item.quantidade}x {item.produtos.nome}
+                      {item.quantidade}x {item.produtos?.nome || 'Produto removido'}
                     </span>
                     <span>
                       R$ {(item.valor_unitario * item.quantidade).toFixed(2).replace('.', ',')}
