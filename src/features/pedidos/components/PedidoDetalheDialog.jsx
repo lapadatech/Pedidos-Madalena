@@ -424,7 +424,7 @@ function PedidoDetalheDialog({ pedidoId, open, onOpenChange, onIniciarEdicao, on
       message += `*Endereço de Entrega:*\n`;
       message += `${formatarEndereco(endereco_entrega)}, ${endereco_entrega.cidade} - ${endereco_entrega.estado}, ${endereco_entrega.cep}\n\n`;
     } else {
-      message += `*Tipo de Entrega:* Retirada\n`;
+      message += `*Tipo de Entrega:* Retiradaerererrereerererreer\n`;
       message += `*Retirada em:* ${lojaNome}\n`;
       if (lojaEndereco) {
         message += `${lojaEndereco}\n`;
